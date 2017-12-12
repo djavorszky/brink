@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 	"sync"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 // AuthType constants represent what type of authentication to use
@@ -12,161 +16,235 @@ import (
 const (
 	AuthNone = iota
 	AuthBasic
+
+	DefaultMaxContentLength   = 512 * 1024          // 512Kb
+	UnlimitedMaxContentlength = 9223372036854775807 // 9.22 exabytes
 )
 
-// Walker represents a web crawler, starting from a RootDomain
+// Crawler represents a web crawler, starting from a RootDomain
 // and visiting all the links in the AllowedDomains map. It will only
 // download the body of an URL if it is less than MaxContentLength.
-type Walker struct {
+type Crawler struct {
 	RootDomain string
+	client     *http.Client
+	opts       CrawlOptions
+
+	// Handlers...
+	defaultHandler func(url string, status int, body string)
+	handlers       map[int]func(url string, status int, body string)
+
+	// dmu is the RWMutext for the allowed domains
+	dmu            sync.RWMutex
+	allowedDomains map[string]bool
+
+	// vmu is the RWMutex for the URLs already visited
+	vmu         sync.RWMutex
+	visitedURLs map[string]bool
+}
+
+// CrawlOptions contains options for the crawler
+type CrawlOptions struct {
 	AuthType   int
 	User, Pass string
 
+	// MaxContentLength specifies the maximum size of pages to be crawled. Setting it to 0
+	// will default to 512Kb. Set it to -1 to allow unlimited size (9.22 exabytes to be
+	// precise - maximum value for int64).
 	MaxContentLength int64
-	//	WorkerCount    int
 
-	client *http.Client
+	// AllowedDomains will be used to check whether a domain is allowed to be crawled or not.
+	AllowedDomains []string
 
-	// dmu is the RWMutext for the allowed domain
-	dmu            *sync.RWMutex
-	allowedDomains map[string]bool
+	// Cookies holds a mapping for URLs -> list of cookies.
+	Cookies map[string][]*http.Cookie
 
-	// vmu is the RWMutex for the visits
-	vmu    *sync.RWMutex
-	visits map[string]bool
-
-	// ctx...?
-	// ctx context.Context
-
-	// Todo: add proxy
-
-	// Handlers...
-	defaultHandler func(url, body string, status int)
-	handlers       map[int]func(url, body string, status int)
+	// todo: add auth
+	// todo: add cookies
+	// todo: add ctx
+	// todo: add proxy support
+	// todo: add beforeFunc and afterFunc
+	// todo: add multiple workers
+	// todo: only differentiate btw pages if their GET parameters actually differ (i.e. ignore order)
 }
 
-// NewWalker returns an initialized Walker.
-func NewWalker(rootDomain string) (Walker, error) {
-	url, err := schemeAndHost(rootDomain)
+// NewCrawler returns an Crawler initialized with default values.
+func NewCrawler(rootDomain string) (*Crawler, error) {
+	rootDomainURL, err := schemeAndHost(rootDomain)
 	if err != nil {
-		return Walker{}, fmt.Errorf("failed parsing url %q: %v", rootDomain, err)
+		return nil, fmt.Errorf("failed parsing url %q: %v", rootDomain, err)
 	}
 
-	w := Walker{
-		RootDomain: url,
+	c := Crawler{
+		RootDomain:     rootDomainURL,
+		allowedDomains: make(map[string]bool),
+		visitedURLs:    make(map[string]bool),
+		handlers:       make(map[int]func(url string, status int, body string)),
+		client:         &http.Client{},
+		opts:           CrawlOptions{MaxContentLength: DefaultMaxContentLength},
 	}
 
-	w.allowedDomains = make(map[string]bool)
-	w.visits = make(map[string]bool)
-	w.handlers = make(map[int]func(url, body string, status int))
+	c.allowedDomains[rootDomainURL] = true
 
-	w.allowedDomains[w.RootDomain] = true
-
-	w.MaxContentLength = 512 * 1024 // 512Kbyte
-
-	return w, nil
+	return &c, nil
 }
 
-// Start starts the walker.
-func (w Walker) Start() error {
-	if w.RootDomain == "" {
+// NewCrawlerWithOpts returns a Crawler initialized with the provided CrawlOptions
+// struct.
+func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, error) {
+	rootDomainURL, err := schemeAndHost(rootDomain)
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing url %q: %v", rootDomain, err)
+	}
+
+	c := Crawler{
+		RootDomain:     rootDomainURL,
+		allowedDomains: make(map[string]bool),
+		visitedURLs:    make(map[string]bool),
+		handlers:       make(map[int]func(url string, status int, body string)),
+		client:         &http.Client{},
+		opts:           userOptions,
+	}
+
+	c.allowedDomains[rootDomainURL] = true
+	for _, domain := range userOptions.AllowedDomains {
+		url, err := schemeAndHost(domain)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing allowed domain url %q: %v", domain, err)
+		}
+
+		c.allowedDomains[url] = true
+	}
+
+	if userOptions.Cookies != nil {
+		cj, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+		if err != nil {
+			return nil, fmt.Errorf("faild creating cookie jar: %v", err)
+		}
+
+		for u, cookies := range userOptions.Cookies {
+			parsedURL, err := url.ParseRequestURI(u)
+			if err != nil {
+				return nil, fmt.Errorf("failed parsing url %q for cookie: %v", parsedURL, err)
+			}
+
+			cj.SetCookies(parsedURL, cookies)
+		}
+
+		c.client.Jar = cj
+	}
+
+	switch userOptions.MaxContentLength {
+	case 0:
+		c.opts.MaxContentLength = DefaultMaxContentLength
+	case -1:
+		c.opts.MaxContentLength = UnlimitedMaxContentlength
+	}
+
+	return &c, nil
+}
+
+// Start starts the crawler at the specified rootDomain. It will scrape the page for
+// links and then visit each of them, provided the domains are allowed. It will keep
+// repeating this process on each page until it runs out of pages to visit.
+//
+// Start requires at least one handler to be registered, otherwise errors out.
+func (c *Crawler) Start() error {
+	if c.RootDomain == "" {
 		return fmt.Errorf("root domain not specified")
 	}
 
-	if w.defaultHandler == nil && len(w.handlers) == 0 {
+	if c.defaultHandler == nil && len(c.handlers) == 0 {
 		return fmt.Errorf("no handlers specified")
 	}
 
 	return nil
 }
 
-// Stop attempts to stop the walker.
-func (w Walker) Stop() error {
+// Stop attempts to stop the crawler.
+func (c *Crawler) Stop() error {
 	return nil
 }
 
-// AllowDomains instructs the walker which domains it is allowed
+// AllowDomains instructs the crawler which domains it is allowed
 // to visit. The RootDomain is automatically added to this list.
 // Domains not allowed will be checked for http status, but will
 // not be traversed.
 //
 // Subsequent calls to AllowDomains adds to the list of domains
-// allowed to the walker to traverse.
-func (w Walker) AllowDomains(domains ...string) {
-	w.dmu.Lock()
-	defer w.dmu.Unlock()
+// allowed to the crawler to traverse.
+func (c *Crawler) AllowDomains(domains ...string) {
+	c.dmu.Lock()
+	defer c.dmu.Unlock()
 
 	for _, domain := range domains {
-		w.allowedDomains[domain] = true
+		c.allowedDomains[domain] = true
 	}
+}
+
+// Crawl fetches the URL and returns its status, body and/or any errors it
+// encountered.
+func (c *Crawler) Crawl(url string) (status int, body []byte, err error) {
+	resp, err := c.client.Get(url)
+	if err != nil {
+		return 0, nil, fmt.Errorf("get failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// if URL is not allowed, return with only its status code
+	if !c.urlAllowed(url) {
+		return resp.StatusCode, nil, nil
+	}
+
+	// if response size is too large (or unknown), return early with
+	// only the status code
+	if resp.ContentLength > c.opts.MaxContentLength {
+		return resp.StatusCode, nil, nil
+	}
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed reading response body: %v", err)
+	}
+
+	return resp.StatusCode, b, nil
 }
 
 // HandleDefaultFunc will be called for all pages returned by a status
 // which doesn't have a seperate handler defined by HandleFunc. Subsequent
 // calls to HandleDefaultFunc will overwrite the previously set handlers,
 // if any.
-func (w Walker) HandleDefaultFunc(h func(url, body string, status int)) {
-	w.defaultHandler = h
+func (c *Crawler) HandleDefaultFunc(h func(url string, status int, body string)) {
+	c.defaultHandler = h
 }
 
 // HandleFunc is used to register a function to be called when a new page is
 // found with the specified status. Subsequent calls to register functions
 // to the same statuses will silently overwrite previously set handlers, if any.
-func (w Walker) HandleFunc(status int, h func(url, body string, status int)) {
-	w.handlers[status] = h
+func (c *Crawler) HandleFunc(status int, h func(url string, status int, body string)) {
+	c.handlers[status] = h
 }
 
-func (w Walker) seen(url string) bool {
-	w.vmu.RLock()
-	defer w.vmu.RUnlock()
+func (c *Crawler) seenURL(url string) bool {
+	c.vmu.RLock()
+	defer c.vmu.RUnlock()
 
-	_, seen := w.visits[url]
+	_, seen := c.visitedURLs[url]
 
 	return seen
 }
 
-func (w Walker) saveVisit(url string) {
-	w.vmu.Lock()
-	defer w.vmu.Unlock()
+func (c *Crawler) saveVisit(url string) {
+	c.vmu.Lock()
+	defer c.vmu.Unlock()
 
-	w.visits[url] = true
+	c.visitedURLs[url] = true
 }
 
-func (w Walker) allowed(url string) bool {
-	w.dmu.RLock()
-	defer w.dmu.RUnlock()
+func (c *Crawler) urlAllowed(url string) bool {
+	c.dmu.RLock()
+	defer c.dmu.RUnlock()
 
-	_, ok := w.allowedDomains[url]
+	_, ok := c.allowedDomains[url]
 
 	return ok
-}
-
-func (w Walker) fetch(url string) (status int, body string, err error) {
-	if w.seen(url) {
-		return 0, "", nil
-	}
-
-	resp, err := w.client.Get(url)
-	if err != nil {
-		return 0, "", fmt.Errorf("get failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// if URL is not allowed, return with only its status code
-	if !w.allowed(url) {
-		return resp.StatusCode, "", nil
-	}
-
-	// if response size is too large (or unknown), return early with
-	// only the status code
-	if resp.ContentLength > w.MaxContentLength {
-		return resp.StatusCode, "", nil
-	}
-
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, "", fmt.Errorf("failed reading response body: %v", err)
-	}
-
-	return resp.StatusCode, string(b), nil
 }
