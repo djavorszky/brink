@@ -48,18 +48,19 @@ type CrawlOptions struct {
 	User, Pass string
 
 	// MaxContentLength specifies the maximum size of pages to be crawled. Setting it to 0
-	// will default to 512Kb. Set it to -1 to allow unlimited size (9.22 exabytes to be
-	// precise - maximum value for int64).
+	// will default to 512Kb. Set it to -1 to allow unlimited size
 	MaxContentLength int64
 
 	// AllowedDomains will be used to check whether a domain is allowed to be crawled or not.
 	AllowedDomains []string
 
-	// Cookies holds a mapping for URLs -> list of cookies.
+	// Cookies holds a mapping for URLs -> list of cookies to be added to all requests
 	Cookies map[string][]*http.Cookie
 
+	// Headers holds a mapping for key->values to be added to all requests
+	Headers map[string]string
+
 	// todo: add auth
-	// todo: add cookies
 	// todo: add ctx
 	// todo: add proxy support
 	// todo: add beforeFunc and afterFunc
@@ -184,7 +185,18 @@ func (c *Crawler) AllowDomains(domains ...string) {
 // Crawl fetches the URL and returns its status, body and/or any errors it
 // encountered.
 func (c *Crawler) Crawl(url string) (status int, body []byte, err error) {
-	resp, err := c.client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed creating new request: %v", err)
+	}
+
+	if c.opts.Headers != nil {
+		for key, value := range c.opts.Headers {
+			req.Header.Add(key, value)
+		}
+	}
+
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return 0, nil, fmt.Errorf("get failed: %v", err)
 	}
