@@ -160,3 +160,25 @@ func Test_setupDomains(t *testing.T) {
 		})
 	}
 }
+
+func Test_getMaxContentLength(t *testing.T) {
+	type args struct {
+		maxCL int64
+	}
+	tests := []struct {
+		name string
+		args args
+		want int64
+	}{
+		{"Default", args{0}, DefaultMaxContentLength},
+		{"Unlimited", args{-1}, UnlimitedMaxContentlength},
+		{"Some value", args{512000}, 512000},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getMaxContentLength(tt.args.maxCL); got != tt.want {
+				t.Errorf("getMaxContentLength() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

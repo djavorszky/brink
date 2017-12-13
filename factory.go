@@ -58,12 +58,7 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 		}
 	}
 
-	switch userOptions.MaxContentLength {
-	case 0:
-		c.opts.MaxContentLength = DefaultMaxContentLength
-	case -1:
-		c.opts.MaxContentLength = UnlimitedMaxContentlength
-	}
+	c.opts.MaxContentLength = getMaxContentLength(userOptions.MaxContentLength)
 
 	return &c, nil
 }
@@ -105,4 +100,15 @@ func fillCookieJar(cookieMap map[string][]*http.Cookie) (http.CookieJar, error) 
 	}
 
 	return cj, nil
+}
+
+func getMaxContentLength(maxCL int64) int64 {
+	switch maxCL {
+	case 0:
+		return DefaultMaxContentLength
+	case -1:
+		return UnlimitedMaxContentlength
+	}
+
+	return maxCL
 }
