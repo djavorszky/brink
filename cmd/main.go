@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 
 	"github.com/djavorszky/brink"
@@ -14,13 +13,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cookies := make(map[string][]*http.Cookie)
-
-	cookies[os.Args[1]] = []*http.Cookie{
-		&http.Cookie{Domain: ".liferay.int", Name: "user", Value: "daniel.javorszky@liferay.com"},
-	}
-
-	c, err := brink.NewCrawlerWithOpts(os.Args[1], brink.CrawlOptions{Cookies: cookies})
+	c, err := brink.NewCrawlerWithOpts(os.Args[1], brink.CrawlOptions{})
 	if err != nil {
 		fmt.Printf("oops: %v\n", err)
 		os.Exit(1)
@@ -32,7 +25,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	links := brink.LinksIn(body)
+	links := brink.LinksIn(body, true)
 
 	for _, link := range links {
 		fmt.Printf("To: %v\n", link.Href)

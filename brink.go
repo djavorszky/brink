@@ -78,6 +78,22 @@ func (c *Crawler) Start() error {
 		return fmt.Errorf("no handlers specified")
 	}
 
+	st, bod, err := c.Fetch(c.RootDomain)
+	if err != nil {
+		return fmt.Errorf("failed initial fetch: %v", err)
+	}
+
+	links := LinksIn(bod, true)
+	for _, l := range links {
+		fmt.Println(l)
+	}
+
+	if f, ok := c.handlers[st]; ok {
+		f(c.RootDomain, st, string(bod))
+	} else {
+		c.defaultHandler(c.RootDomain, st, string(bod))
+	}
+
 	return nil
 }
 
@@ -122,8 +138,13 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 	}
 	defer resp.Body.Close()
 
+	domain, err := schemeAndHost(url)
+	if err != nil {
+		return 0, nil, fmt.Errorf("malformed url: %v", err)
+	}
+
 	// if URL is not allowed, return with only its status code
-	if !c.urlAllowed(url) {
+	if !c.domainAllowed(domain) {
 		return resp.StatusCode, nil, nil
 	}
 
@@ -172,11 +193,9 @@ func (c *Crawler) saveVisit(url string) {
 	c.visitedURLs[url] = true
 }
 
-func (c *Crawler) urlAllowed(url string) bool {
+func (c *Crawler) domainAllowed(domain string) bool {
 	c.dmu.RLock()
 	defer c.dmu.RUnlock()
 
-	_, ok := c.allowedDomains[url]
-
-	return ok
+	return c.allowedDomains[domain]
 }
