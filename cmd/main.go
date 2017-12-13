@@ -22,7 +22,7 @@ func main() {
 		&http.Cookie{Domain: ".liferay.int", Name: "user", Value: "daniel.javorszky@liferay.com"},
 	}
 
-	c, err := brink.NewCrawlerWithOpts(os.Args[1], nil)
+	c, err := brink.NewCrawlerWithOpts(os.Args[1], brink.CrawlOptions{Cookies: cookies})
 	if err != nil {
 		fmt.Printf("oops: %v\n", err)
 		os.Exit(1)
