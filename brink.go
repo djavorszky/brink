@@ -4,11 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/cookiejar"
-	"net/url"
 	"sync"
-
-	"golang.org/x/net/publicsuffix"
 )
 
 // AuthType constants represent what type of authentication to use
@@ -66,82 +62,6 @@ type CrawlOptions struct {
 	// todo: add beforeFunc and afterFunc
 	// todo: add multiple workers
 	// todo: only differentiate btw pages if their GET parameters actually differ (i.e. ignore order)
-}
-
-// NewCrawler returns an Crawler initialized with default values.
-func NewCrawler(rootDomain string) (*Crawler, error) {
-	rootDomainURL, err := schemeAndHost(rootDomain)
-	if err != nil {
-		return nil, fmt.Errorf("failed parsing url %q: %v", rootDomain, err)
-	}
-
-	c := Crawler{
-		RootDomain:     rootDomainURL,
-		allowedDomains: make(map[string]bool),
-		visitedURLs:    make(map[string]bool),
-		handlers:       make(map[int]func(url string, status int, body string)),
-		client:         &http.Client{},
-		opts:           CrawlOptions{MaxContentLength: DefaultMaxContentLength},
-	}
-
-	c.allowedDomains[rootDomainURL] = true
-
-	return &c, nil
-}
-
-// NewCrawlerWithOpts returns a Crawler initialized with the provided CrawlOptions
-// struct.
-func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, error) {
-	rootDomainURL, err := schemeAndHost(rootDomain)
-	if err != nil {
-		return nil, fmt.Errorf("failed parsing url %q: %v", rootDomain, err)
-	}
-
-	c := Crawler{
-		RootDomain:     rootDomainURL,
-		allowedDomains: make(map[string]bool),
-		visitedURLs:    make(map[string]bool),
-		handlers:       make(map[int]func(url string, status int, body string)),
-		client:         &http.Client{},
-		opts:           userOptions,
-	}
-
-	c.allowedDomains[rootDomainURL] = true
-	for _, domain := range userOptions.AllowedDomains {
-		url, err := schemeAndHost(domain)
-		if err != nil {
-			return nil, fmt.Errorf("failed parsing allowed domain url %q: %v", domain, err)
-		}
-
-		c.allowedDomains[url] = true
-	}
-
-	if userOptions.Cookies != nil {
-		cj, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-		if err != nil {
-			return nil, fmt.Errorf("faild creating cookie jar: %v", err)
-		}
-
-		for u, cookies := range userOptions.Cookies {
-			parsedURL, err := url.ParseRequestURI(u)
-			if err != nil {
-				return nil, fmt.Errorf("failed parsing url %q for cookie: %v", parsedURL, err)
-			}
-
-			cj.SetCookies(parsedURL, cookies)
-		}
-
-		c.client.Jar = cj
-	}
-
-	switch userOptions.MaxContentLength {
-	case 0:
-		c.opts.MaxContentLength = DefaultMaxContentLength
-	case -1:
-		c.opts.MaxContentLength = UnlimitedMaxContentlength
-	}
-
-	return &c, nil
 }
 
 // Start starts the crawler at the specified rootDomain. It will scrape the page for
