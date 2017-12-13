@@ -39,22 +39,16 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	}
 
 	c := Crawler{
-		RootDomain:     rootDomainURL,
-		allowedDomains: make(map[string]bool),
-		visitedURLs:    make(map[string]bool),
-		handlers:       make(map[int]func(url string, status int, body string)),
-		client:         &http.Client{},
-		opts:           userOptions,
+		RootDomain:  rootDomainURL,
+		visitedURLs: make(map[string]bool),
+		handlers:    make(map[int]func(url string, status int, body string)),
+		client:      &http.Client{},
+		opts:        userOptions,
 	}
 
-	c.allowedDomains[rootDomainURL] = true
-	for _, domain := range userOptions.AllowedDomains {
-		url, err := schemeAndHost(domain)
-		if err != nil {
-			return nil, fmt.Errorf("failed parsing allowed domain url %q: %v", domain, err)
-		}
-
-		c.allowedDomains[url] = true
+	c.allowedDomains, err = setupDomains(rootDomainURL, userOptions.AllowedDomains)
+	if err != nil {
+		return nil, fmt.Errorf("allowed domains setup: %v", err)
 	}
 
 	if userOptions.Cookies != nil {
@@ -72,6 +66,27 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	}
 
 	return &c, nil
+}
+
+func setupDomains(rootDomain string, otherDomains []string) (map[string]bool, error) {
+	if rootDomain == "" {
+		return nil, fmt.Errorf("empty rootdomain")
+	}
+
+	otherDomains = append(otherDomains, rootDomain)
+
+	domains := make(map[string]bool)
+
+	for _, domain := range otherDomains {
+		url, err := schemeAndHost(domain)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing allowed domain url %q: %v", domain, err)
+		}
+
+		domains[url] = true
+	}
+
+	return domains, nil
 }
 
 func fillCookieJar(cookieMap map[string][]*http.Cookie) (http.CookieJar, error) {
