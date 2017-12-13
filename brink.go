@@ -102,9 +102,9 @@ func (c *Crawler) AllowDomains(domains ...string) {
 	}
 }
 
-// Crawl fetches the URL and returns its status, body and/or any errors it
+// Fetch fetches the URL and returns its status, body and/or any errors it
 // encountered.
-func (c *Crawler) Crawl(url string) (status int, body []byte, err error) {
+func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed creating new request: %v", err)

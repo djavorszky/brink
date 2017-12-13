@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/djavorszky/brink"
-	"golang.org/x/net/html"
 )
 
 func main() {
@@ -28,22 +26,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	status, body, err := c.Crawl(os.Args[1])
+	_, body, err := c.Fetch(os.Args[1])
 	if err != nil {
 		fmt.Printf("oops: %v", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("status code: %d", status)
+	links := brink.LinksIn(body)
 
-	z := html.NewTokenizer(bytes.NewBuffer(body))
-	for {
-		if z.Next() == html.ErrorToken {
-			// Returning io.EOF indicates success.
-			return
-		}
-
-		t := z.Token()
-		fmt.Printf("Type: %s, Data: %s\n", t.Type, t.Data)
+	for _, link := range links {
+		fmt.Printf("To: %v\n", link.Href)
 	}
+
+	fmt.Println(len(links))
 }
