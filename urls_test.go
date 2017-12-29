@@ -81,3 +81,27 @@ func Test_LinksIn(t *testing.T) {
 		})
 	}
 }
+
+func TestSortGetParameters(t *testing.T) {
+	type args struct {
+		_url string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{"no_get_params", args{"https://liferay.com"}, "https://liferay.com"},
+		{"one_get_param", args{"https://liferay.com?test=something"}, "https://liferay.com?test=something"},
+		{"two_get_params", args{"https://liferay.com?test=justTesting&something=123"}, "https://liferay.com?something=123&test=justTesting"},
+		{"one_get_param_no_value", args{"https://liferay.com?test"}, "https://liferay.com?test"},
+		{"two_get_params_no_value", args{"https://liferay.com?test&something"}, "https://liferay.com?something&test"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got, _ := SortGetParameters(tt.args._url); got != tt.want {
+				t.Errorf("SortGetParameters() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

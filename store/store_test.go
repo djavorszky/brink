@@ -8,7 +8,7 @@ func TestNew(t *testing.T) {
 	store := New()
 
 	// At the point of writing the test, New() can only fail if it's
-	// not initialized propertly. Either the RWmutex is created wrongly
+	// not initialized propertly. Either the RWMutex is created wrongly
 	// or the map is not initialized - in either case, the below should
 	// result in a panic.
 	store.Store("testKey", "testValue")
@@ -134,6 +134,42 @@ func TestCStore_StoreKey(t *testing.T) {
 			if !ok {
 				t.Errorf("failed to store key: %q", tt.args.key)
 			}
+		})
+	}
+}
+
+func TestCStore_ToMap(t *testing.T) {
+	type args struct {
+		key   string
+		value string
+	}
+	tests := []struct {
+		name string
+		args args
+		want args
+	}{
+		{"key_value_ok", args{"testKey", "testValue"}, args{"testKey", "testValue"}},
+		{"value_empty", args{"testKey", ""}, args{"testKey", ""}},
+		{"key_empty", args{"", "testValue"}, args{"", "testValue"}},
+		{"both_empty", args{"", ""}, args{"", ""}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cs := New()
+
+			cs.Store(tt.args.key, tt.args.value)
+
+			cc := cs.ToMap()
+
+			val, ok := cc[tt.args.key]
+			if !ok {
+				t.Errorf("key-value pair %q:%q not present in copied map", tt.args.key, tt.args.value)
+			}
+
+			if val != tt.args.value {
+				t.Errorf("copied map contains %q instead of %q for key %q", val, tt.args.value, tt.args.key)
+			}
+
 		})
 	}
 }

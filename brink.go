@@ -119,13 +119,14 @@ func (c *Crawler) HandleFunc(status int, h func(url string, status int, body str
 }
 
 func (c *Crawler) seenURL(url string) bool {
-	_, seen := c.visitedURLs.Load(url)
-
-	return seen
+	return c.visitedURLs.Exists(url)
 }
 
-func (c *Crawler) saveVisit(url string) {
-	c.visitedURLs.StoreKey(url)
+func (c *Crawler) saveVisit(_url string) {
+	sortedURL, _ := SortGetParameters(_url)
+
+	c.visitedURLs.StoreKey(sortedURL)
+	return
 }
 
 func (c *Crawler) domainAllowed(domain string) bool {

@@ -32,4 +32,5 @@ func main() {
 	}
 
 	fmt.Println(len(links))
+
 }

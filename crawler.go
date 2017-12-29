@@ -63,5 +63,4 @@ type CrawlOptions struct {
 	// todo: add proxy support
 	// todo: add beforeFunc and afterFunc
 	// todo: add multiple workers
-	// todo: only differentiate btw pages if their GET parameters actually differ (i.e. ignore order)
 }

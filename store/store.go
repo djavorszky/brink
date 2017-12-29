@@ -40,3 +40,26 @@ func (cs *CStore) Exists(key string) bool {
 func (cs *CStore) StoreKey(key string) {
 	cs.Store(key, "")
 }
+
+// Delete deletes an entry from the underlying map
+func (cs *CStore) Delete(key string) {
+	cs.mu.Lock()
+	delete(cs.store, key)
+	cs.mu.Unlock()
+}
+
+// Size returns the size of the underlying map
+func (cs *CStore) Size() int {
+	return len(cs.store)
+}
+
+// ToMap creates a copy of the underlying map and returns it
+func (cs *CStore) ToMap() map[string]string {
+	newMap := make(map[string]string, len(cs.store))
+
+	for k, v := range cs.store {
+		newMap[k] = v
+	}
+
+	return newMap
+}

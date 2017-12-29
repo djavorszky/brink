@@ -18,12 +18,13 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 	}
 
 	c := Crawler{
-		RootDomain:     rootDomainURL,
-		allowedDomains: store.New(),
-		visitedURLs:    store.New(),
-		handlers:       make(map[int]func(url string, status int, body string)),
-		client:         &http.Client{},
-		opts:           CrawlOptions{MaxContentLength: DefaultMaxContentLength},
+		RootDomain:      rootDomainURL,
+		allowedDomains:  store.New(),
+		visitedURLs:     store.New(),
+		ignoreGETParams: store.New(),
+		handlers:        make(map[int]func(url string, status int, body string)),
+		client:          &http.Client{},
+		opts:            CrawlOptions{MaxContentLength: DefaultMaxContentLength},
 	}
 
 	c.AllowDomains(rootDomainURL)
@@ -40,10 +41,13 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	}
 
 	c := Crawler{
-		RootDomain: rootDomainURL,
-		handlers:   make(map[int]func(url string, status int, body string)),
-		client:     &http.Client{},
-		opts:       userOptions,
+		RootDomain:      rootDomainURL,
+		allowedDomains:  store.New(),
+		visitedURLs:     store.New(),
+		ignoreGETParams: store.New(),
+		handlers:        make(map[int]func(url string, status int, body string)),
+		client:          &http.Client{},
+		opts:            userOptions,
 	}
 
 	err = setupDomains(&c.allowedDomains, rootDomainURL, userOptions.AllowedDomains)
