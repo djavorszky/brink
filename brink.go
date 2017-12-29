@@ -4,65 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"sync"
 )
-
-// AuthType constants represent what type of authentication to use
-// when visiting the pages
-const (
-	AuthNone = iota
-	AuthBasic
-
-	DefaultMaxContentLength   = 512 * 1024          // 512Kb
-	UnlimitedMaxContentlength = 9223372036854775807 // 9.22 exabytes
-)
-
-// Crawler represents a web crawler, starting from a RootDomain
-// and visiting all the links in the AllowedDomains map. It will only
-// download the body of an URL if it is less than MaxContentLength.
-type Crawler struct {
-	RootDomain string
-	client     *http.Client
-	opts       CrawlOptions
-
-	// Handlers...
-	defaultHandler func(url string, status int, body string)
-	handlers       map[int]func(url string, status int, body string)
-
-	// dmu is the RWMutext for the allowed domains
-	dmu            sync.RWMutex
-	allowedDomains map[string]bool
-
-	// vmu is the RWMutex for the URLs already visited
-	vmu         sync.RWMutex
-	visitedURLs map[string]bool
-}
-
-// CrawlOptions contains options for the crawler
-type CrawlOptions struct {
-	AuthType   int
-	User, Pass string
-
-	// MaxContentLength specifies the maximum size of pages to be crawled. Setting it to 0
-	// will default to 512Kb. Set it to -1 to allow unlimited size
-	MaxContentLength int64
-
-	// AllowedDomains will be used to check whether a domain is allowed to be crawled or not.
-	AllowedDomains []string
-
-	// Cookies holds a mapping for URLs -> list of cookies to be added to all requests
-	Cookies map[string][]*http.Cookie
-
-	// Headers holds a mapping for key->values to be added to all requests
-	Headers map[string]string
-
-	// todo: add auth
-	// todo: add ctx
-	// todo: add proxy support
-	// todo: add beforeFunc and afterFunc
-	// todo: add multiple workers
-	// todo: only differentiate btw pages if their GET parameters actually differ (i.e. ignore order)
-}
 
 // Start starts the crawler at the specified rootDomain. It will scrape the page for
 // links and then visit each of them, provided the domains are allowed. It will keep
@@ -99,6 +41,8 @@ func (c *Crawler) Start() error {
 
 // Stop attempts to stop the crawler.
 func (c *Crawler) Stop() error {
+	// todo: implement
+
 	return nil
 }
 
@@ -110,11 +54,8 @@ func (c *Crawler) Stop() error {
 // Subsequent calls to AllowDomains adds to the list of domains
 // allowed to the crawler to traverse.
 func (c *Crawler) AllowDomains(domains ...string) {
-	c.dmu.Lock()
-	defer c.dmu.Unlock()
-
 	for _, domain := range domains {
-		c.allowedDomains[domain] = true
+		c.allowedDomains.StoreKey(domain)
 	}
 }
 
@@ -145,13 +86,13 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 
 	// if URL is not allowed, return with only its status code
 	if !c.domainAllowed(domain) {
-		return resp.StatusCode, nil, nil
+		return resp.StatusCode, nil, NotAllowed{domain}
 	}
 
 	// if response size is too large (or unknown), return early with
 	// only the status code
 	if resp.ContentLength > c.opts.MaxContentLength {
-		return resp.StatusCode, nil, nil
+		return resp.StatusCode, nil, ContentTooLarge{url}
 	}
 
 	b, err := ioutil.ReadAll(resp.Body)
@@ -178,24 +119,17 @@ func (c *Crawler) HandleFunc(status int, h func(url string, status int, body str
 }
 
 func (c *Crawler) seenURL(url string) bool {
-	c.vmu.RLock()
-	defer c.vmu.RUnlock()
-
-	_, seen := c.visitedURLs[url]
+	_, seen := c.visitedURLs.Load(url)
 
 	return seen
 }
 
 func (c *Crawler) saveVisit(url string) {
-	c.vmu.Lock()
-	defer c.vmu.Unlock()
-
-	c.visitedURLs[url] = true
+	c.visitedURLs.StoreKey(url)
 }
 
 func (c *Crawler) domainAllowed(domain string) bool {
-	c.dmu.RLock()
-	defer c.dmu.RUnlock()
+	_, ok := c.allowedDomains.Load(domain)
 
-	return c.allowedDomains[domain]
+	return ok
 }

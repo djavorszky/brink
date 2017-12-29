@@ -6,6 +6,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 
+	"github.com/djavorszky/brink/store"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -18,14 +19,14 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 
 	c := Crawler{
 		RootDomain:     rootDomainURL,
-		allowedDomains: make(map[string]bool),
-		visitedURLs:    make(map[string]bool),
+		allowedDomains: store.New(),
+		visitedURLs:    store.New(),
 		handlers:       make(map[int]func(url string, status int, body string)),
 		client:         &http.Client{},
 		opts:           CrawlOptions{MaxContentLength: DefaultMaxContentLength},
 	}
 
-	c.allowedDomains[rootDomainURL] = true
+	c.AllowDomains(rootDomainURL)
 
 	return &c, nil
 }
@@ -39,14 +40,13 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	}
 
 	c := Crawler{
-		RootDomain:  rootDomainURL,
-		visitedURLs: make(map[string]bool),
-		handlers:    make(map[int]func(url string, status int, body string)),
-		client:      &http.Client{},
-		opts:        userOptions,
+		RootDomain: rootDomainURL,
+		handlers:   make(map[int]func(url string, status int, body string)),
+		client:     &http.Client{},
+		opts:       userOptions,
 	}
 
-	c.allowedDomains, err = setupDomains(rootDomainURL, userOptions.AllowedDomains)
+	err = setupDomains(&c.allowedDomains, rootDomainURL, userOptions.AllowedDomains)
 	if err != nil {
 		return nil, fmt.Errorf("allowed domains setup: %v", err)
 	}
@@ -63,25 +63,23 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	return &c, nil
 }
 
-func setupDomains(rootDomain string, otherDomains []string) (map[string]bool, error) {
+func setupDomains(allowedDomains *store.CStore, rootDomain string, otherDomains []string) error {
 	if rootDomain == "" {
-		return nil, fmt.Errorf("empty rootdomain")
+		return fmt.Errorf("empty rootdomain")
 	}
 
 	otherDomains = append(otherDomains, rootDomain)
 
-	domains := make(map[string]bool)
-
 	for _, domain := range otherDomains {
 		url, err := schemeAndHost(domain)
 		if err != nil {
-			return nil, fmt.Errorf("failed parsing allowed domain url %q: %v", domain, err)
+			return fmt.Errorf("failed parsing allowed domain url %q: %v", domain, err)
 		}
 
-		domains[url] = true
+		allowedDomains.Store(url, "")
 	}
 
-	return domains, nil
+	return nil
 }
 
 func fillCookieJar(cookieMap map[string][]*http.Cookie) (http.CookieJar, error) {

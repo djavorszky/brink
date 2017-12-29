@@ -7,14 +7,15 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/djavorszky/brink/store"
 	"golang.org/x/net/publicsuffix"
 )
 
 func TestNewCrawler(t *testing.T) {
 	testCrawler := &Crawler{
 		RootDomain:     "https://liferay.com",
-		allowedDomains: make(map[string]bool),
-		visitedURLs:    make(map[string]bool),
+		allowedDomains: store.New(),
+		visitedURLs:    store.New(),
 		handlers:       make(map[int]func(url string, status int, body string)),
 		client:         &http.Client{},
 		opts:           CrawlOptions{MaxContentLength: DefaultMaxContentLength},
@@ -123,43 +124,21 @@ func Test_fillCookieJar(t *testing.T) {
 	}
 }
 
-func Test_setupDomains(t *testing.T) {
-	type args struct {
-		rootDomain   string
-		otherDomains []string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    map[string]bool
-		wantErr bool
-	}{
-		{"No rootdomain", args{"", []string{}}, nil, true},
-		{"No scheme in rootdomain", args{"google.com", []string{}}, nil, true},
-		{"No scheme in otherdomains", args{"https://google.com", []string{"plus.google.com"}}, nil, true},
-		{"One otherdomain", args{"https://google.com", []string{"https://plus.google.com"}}, map[string]bool{
-			"https://google.com":      true,
-			"https://plus.google.com": true,
-		}, false},
-		{"Two otherdomains", args{"https://google.com", []string{"https://plus.google.com", "https://gmail.com"}}, map[string]bool{
-			"https://google.com":      true,
-			"https://plus.google.com": true,
-			"https://gmail.com":       true,
-		}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := setupDomains(tt.args.rootDomain, tt.args.otherDomains)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("setupDomains() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("setupDomains() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+/*
+	{"No rootdomain", args{"", []string{}}, nil, true},
+	{"No scheme in rootdomain", args{"google.com", []string{}}, nil, true},
+	{"No scheme in otherdomains", args{"https://google.com", []string{"plus.google.com"}}, nil, true},
+	{"One otherdomain", args{"https://google.com", []string{"https://plus.google.com"}}, map[string]bool{
+		"https://google.com":      true,
+		"https://plus.google.com": true,
+	}, false},
+	{"Two otherdomains", args{"https://google.com", []string{"https://plus.google.com", "https://gmail.com"}}, map[string]bool{
+		"https://google.com":      true,
+		"https://plus.google.com": true,
+		"https://gmail.com":       true,
+	}, false},
+
+*/
 
 func Test_getMaxContentLength(t *testing.T) {
 	type args struct {
