@@ -64,6 +64,10 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 
 	c.opts.MaxContentLength = getMaxContentLength(userOptions.MaxContentLength)
 
+	for _, v := range userOptions.IgnoreGETParameters {
+		c.ignoreGETParams.StoreKey(v)
+	}
+
 	return &c, nil
 }
 

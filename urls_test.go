@@ -82,8 +82,12 @@ func Test_LinksIn(t *testing.T) {
 	}
 }
 
-func TestSortGetParameters(t *testing.T) {
+func Test_normalizeURL(t *testing.T) {
+	normCrawler, _ := NewCrawler("https://liferay.com")
+	ignoreCrawler, _ := NewCrawlerWithOpts("https://liferay.com", CrawlOptions{IgnoreGETParameters: []string{"something"}})
+
 	type args struct {
+		c    *Crawler
 		_url string
 	}
 	tests := []struct {
@@ -91,15 +95,23 @@ func TestSortGetParameters(t *testing.T) {
 		args args
 		want string
 	}{
-		{"no_get_params", args{"https://liferay.com"}, "https://liferay.com"},
-		{"one_get_param", args{"https://liferay.com?test=something"}, "https://liferay.com?test=something"},
-		{"two_get_params", args{"https://liferay.com?test=justTesting&something=123"}, "https://liferay.com?something=123&test=justTesting"},
-		{"one_get_param_no_value", args{"https://liferay.com?test"}, "https://liferay.com?test"},
-		{"two_get_params_no_value", args{"https://liferay.com?test&something"}, "https://liferay.com?something&test"},
+		{"no_get_params", args{normCrawler, "https://liferay.com"}, "https://liferay.com"},
+		{"one_get_param", args{normCrawler, "https://liferay.com?test=something"}, "https://liferay.com?test=something"},
+		{"two_get_params", args{normCrawler, "https://liferay.com?test=justTesting&something=123"}, "https://liferay.com?something=123&test=justTesting"},
+		{"one_get_param_no_value", args{normCrawler, "https://liferay.com?test"}, "https://liferay.com?test"},
+		{"two_get_params_no_value", args{normCrawler, "https://liferay.com?test&something"}, "https://liferay.com?something&test"},
+		{"one_get_param_not_ignored", args{ignoreCrawler, "https://liferay.com?test=something"}, "https://liferay.com?test=something"},
+		{"one_get_param_ignored", args{ignoreCrawler, "https://liferay.com?something=test"}, "https://liferay.com"},
+		{"two_get_params_none_ignored", args{ignoreCrawler, "https://liferay.com?test=justTesting&shoot=123"}, "https://liferay.com?shoot=123&test=justTesting"},
+		{"two_get_params_one_ignored", args{ignoreCrawler, "https://liferay.com?test=justTesting&something=123"}, "https://liferay.com?test=justTesting"},
+		{"two_get_params_both_ignored", args{ignoreCrawler, "https://liferay.com?something=justTesting&something=123"}, "https://liferay.com"},
+		{"one_get_param_no_value_not_ignored", args{ignoreCrawler, "https://liferay.com?test"}, "https://liferay.com?test"},
+		{"one_get_param_no_value_ignored", args{ignoreCrawler, "https://liferay.com?something"}, "https://liferay.com"},
+		{"two_get_params_no_value_one_ignored", args{ignoreCrawler, "https://liferay.com?test&something"}, "https://liferay.com?test"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, _ := SortGetParameters(tt.args._url); got != tt.want {
+			if got, _ := tt.args.c.normalizeURL(tt.args._url); got != tt.want {
 				t.Errorf("SortGetParameters() = %v, want %v", got, tt.want)
 			}
 		})

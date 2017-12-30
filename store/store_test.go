@@ -105,7 +105,7 @@ func TestCStore_Exists(t *testing.T) {
 			cs := New()
 			cs.store[tt.args.key] = tt.args.value
 
-			if cs.Exists(tt.args.key) != tt.want {
+			if cs.Contains(tt.args.key) != tt.want {
 				t.Errorf("expected existence to be %t, is %t.", tt.want, !tt.want)
 			}
 		})

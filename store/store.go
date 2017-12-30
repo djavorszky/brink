@@ -29,8 +29,8 @@ func (cs *CStore) Load(key string) (string, bool) {
 	return val, ok
 }
 
-// Exists checks if a key exists in the store.
-func (cs *CStore) Exists(key string) bool {
+// Contains checks if a key exists in the store.
+func (cs *CStore) Contains(key string) bool {
 	_, ok := cs.Load(key)
 
 	return ok

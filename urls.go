@@ -62,10 +62,14 @@ func LinksIn(response []byte, ignoreAnchors bool) []Link {
 	}
 }
 
-// SortGetParameters expects a full URL and returns one in which the GET parameters
-// have been sorted by their keys.
-func SortGetParameters(_url string) (string, error) {
-	var result []string
+// normalizeURL expects a full URL and returns one in which the GET parameters
+// have been sorted by their keys. It also removes any GET parameters which the
+// Crawler has been told to ignore.
+func (c *Crawler) normalizeURL(_url string) (string, error) {
+	var (
+		result       []string
+		ignoreParams bool
+	)
 
 	u, err := url.ParseRequestURI(_url)
 	if err != nil {
@@ -73,11 +77,15 @@ func SortGetParameters(_url string) (string, error) {
 	}
 	params := u.Query()
 
-	if len(params) == 0 {
-		return fmt.Sprintf("%s://%s", u.Scheme, u.Host), nil
+	if c.ignoreGETParams.Size() > 0 {
+		ignoreParams = true
 	}
 
 	for key, vals := range params {
+		if ignoreParams && c.ignoreGETParams.Contains(key) {
+			continue
+		}
+
 		for _, val := range vals {
 			if val == "" {
 				result = append(result, key)
@@ -89,6 +97,10 @@ func SortGetParameters(_url string) (string, error) {
 	}
 
 	sort.Strings(result)
+
+	if len(result) == 0 {
+		return fmt.Sprintf("%s://%s", u.Scheme, u.Host), nil
+	}
 
 	return fmt.Sprintf("%s://%s?%s", u.Scheme, u.Host, strings.Join(result, "&")), nil
 }
