@@ -51,6 +51,9 @@ type CrawlOptions struct {
 	// URLBufferSize is the amount of URLs that can be waiting to be visited.
 	URLBufferSize int
 
+	// WorkerCount specifies the number of goroutines that will work on crawling the domains.
+	WorkerCount int
+
 	// MaxContentLength specifies the maximum size of pages to be crawled. Setting it to 0
 	// will default to 512Kb. Set it to -1 to allow unlimited size
 	MaxContentLength int64

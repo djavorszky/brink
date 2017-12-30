@@ -29,6 +29,7 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 		opts: CrawlOptions{
 			MaxContentLength: DefaultMaxContentLength,
 			URLBufferSize:    100,
+			WorkerCount:      10,
 		},
 	}
 

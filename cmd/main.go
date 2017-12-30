@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/djavorszky/brink"
 )
@@ -19,18 +22,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, body, err := c.Fetch(os.Args[1])
-	if err != nil {
-		fmt.Printf("oops: %v", err)
-		os.Exit(1)
-	}
+	ch := make(chan os.Signal, 2)
+	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ch
+		c.Stop()
+	}()
 
-	links := brink.LinksIn(body, true)
+	c.HandleDefaultFunc(handler)
 
-	for _, link := range links {
-		fmt.Printf("To: %v\n", link.Href)
-	}
+	c.Start()
+}
 
-	fmt.Println(len(links))
-
+func handler(url string, status int, body string) {
+	log.Printf("status: %d, url: %v", status, url)
 }

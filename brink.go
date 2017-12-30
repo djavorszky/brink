@@ -3,7 +3,9 @@ package brink
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"sync"
 )
 
 // Start starts the crawler at the specified rootDomain. It will scrape the page for
@@ -12,6 +14,7 @@ import (
 //
 // Start requires at least one handler to be registered, otherwise errors out.
 func (c *Crawler) Start() error {
+	// Prefetch checks
 	if c.RootDomain == "" {
 		return fmt.Errorf("root domain not specified")
 	}
@@ -20,28 +23,82 @@ func (c *Crawler) Start() error {
 		return fmt.Errorf("no handlers specified")
 	}
 
-	st, bod, err := c.Fetch(c.RootDomain)
-	if err != nil {
-		return fmt.Errorf("failed initial fetch: %v", err)
-	}
+	// Spawn workers
+	var wg sync.WaitGroup
+	c.spawnWorkers(&wg)
 
-	links := LinksIn(bod, true)
-	for _, l := range links {
-		fmt.Println(l)
-	}
+	c.urls <- Link{Href: c.RootDomain}
 
-	if f, ok := c.handlers[st]; ok {
-		f(c.RootDomain, st, string(bod))
-	} else {
-		c.defaultHandler(c.RootDomain, st, string(bod))
-	}
+	wg.Wait()
 
 	return nil
 }
 
+func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
+	wg.Add(c.opts.WorkerCount)
+
+	for i := 0; i < c.opts.WorkerCount; i++ {
+		name := fmt.Sprintf("goroutine-%d", i)
+		log.Printf("Spawning %s", name)
+
+		go func(name string) {
+			defer wg.Done()
+
+			var count int
+
+			for link := range c.urls {
+				count++
+				url, err := c.normalizeURL(link.Href)
+				if err != nil {
+					// Debug..
+					log.Printf("%s: failed normalize: %v", name, err)
+					continue
+				}
+
+				if c.seenURL(url) {
+					// Debug..
+					log.Printf("%s: already seen URL: %s", name, url)
+					continue
+				}
+
+				c.visitedURLs.StoreKey(url)
+
+				st, bod, err := c.Fetch(url)
+				if err != nil {
+					// Debug..
+					log.Printf("%s: failed fetch: %v", name, err)
+					continue
+				}
+
+				if f, ok := c.handlers[st]; ok {
+					f(c.RootDomain, st, string(bod))
+				} else {
+					c.defaultHandler(c.RootDomain, st, string(bod))
+				}
+
+				if st != http.StatusOK {
+					continue
+				}
+
+				// Parse links and send them all to the urls channel
+				links := LinksIn(bod, true)
+				for _, l := range links {
+					log.Printf("%s: url: %v", name, l.Href)
+					c.visitedURLs.StoreKey(l.Href)
+
+					c.urls <- l
+				}
+
+				log.Printf("%s: count: %d", name, count)
+			}
+		}(name)
+	}
+}
+
 // Stop attempts to stop the crawler.
 func (c *Crawler) Stop() error {
-	// todo: implement
+	log.Println("Received signal to stop.")
+	close(c.urls)
 
 	return nil
 }
@@ -122,12 +179,6 @@ func (c *Crawler) seenURL(url string) bool {
 	normalizedURL, _ := c.normalizeURL(url)
 
 	return c.visitedURLs.Contains(normalizedURL)
-}
-
-func (c *Crawler) saveVisit(url string) {
-	normalizedURL, _ := c.normalizeURL(url)
-
-	c.visitedURLs.StoreKey(normalizedURL)
 }
 
 func (c *Crawler) domainAllowed(domain string) bool {
