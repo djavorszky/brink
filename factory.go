@@ -26,8 +26,13 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 		reqHeaders:       store.New(),
 		handlers:         make(map[int]func(url string, status int, body string)),
 		client:           &http.Client{},
-		opts:             CrawlOptions{MaxContentLength: DefaultMaxContentLength},
+		opts: CrawlOptions{
+			MaxContentLength: DefaultMaxContentLength,
+			URLBufferSize:    100,
+		},
 	}
+
+	c.urls = make(chan Link, c.opts.URLBufferSize)
 
 	c.AllowDomains(rootDomainURL)
 
@@ -37,20 +42,9 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 // NewCrawlerWithOpts returns a Crawler initialized with the provided CrawlOptions
 // struct.
 func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, error) {
-	rootDomainURL, err := schemeAndHost(rootDomain)
+	c, err := NewCrawler(rootDomain)
 	if err != nil {
-		return nil, fmt.Errorf("failed parsing url %q: %v", rootDomain, err)
-	}
-
-	c := Crawler{
-		RootDomain:       rootDomainURL,
-		allowedDomains:   store.New(),
-		visitedURLs:      store.New(),
-		ignoredGETParams: store.New(),
-		reqHeaders:       store.New(),
-		handlers:         make(map[int]func(url string, status int, body string)),
-		client:           &http.Client{},
-		opts:             userOptions,
+		return nil, fmt.Errorf("failed creating new crawler: %v", err)
 	}
 
 	// Headers
@@ -61,7 +55,7 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	}
 
 	// Domains
-	err = setupDomains(&c.allowedDomains, rootDomainURL, userOptions.AllowedDomains)
+	err = setupDomains(&c.allowedDomains, c.RootDomain, userOptions.AllowedDomains)
 	if err != nil {
 		return nil, fmt.Errorf("allowed domains setup: %v", err)
 	}
@@ -83,19 +77,22 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	}
 
 	// Authentication
-	err = configureAuth(&c, userOptions.AuthType, userOptions.User, userOptions.Pass)
+	err = configureAuth(c, userOptions.AuthType, userOptions.User, userOptions.Pass)
 	if err != nil {
 		return nil, fmt.Errorf("failed setting up auth: %v", err)
 	}
 
-	return &c, nil
+	// Make sure we overwrite the default channel size in case it is specified in the
+	// userOptions
+	if userOptions.URLBufferSize != 0 {
+		close(c.urls)
+		c.urls = make(chan Link, userOptions.URLBufferSize)
+	}
+
+	return c, nil
 }
 
 func setupDomains(allowedDomains *store.CStore, rootDomain string, otherDomains []string) error {
-	if rootDomain == "" {
-		return fmt.Errorf("empty rootdomain")
-	}
-
 	otherDomains = append(otherDomains, rootDomain)
 
 	for _, domain := range otherDomains {

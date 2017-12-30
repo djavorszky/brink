@@ -33,6 +33,10 @@ type Crawler struct {
 	defaultHandler func(url string, status int, body string)
 	handlers       map[int]func(url string, status int, body string)
 
+	// urls is the channel that goroutines will send URLs to and
+	// receive URLs from when visiting and processing pages.
+	urls chan Link
+
 	reqHeaders       store.CStore
 	allowedDomains   store.CStore
 	visitedURLs      store.CStore
@@ -43,6 +47,9 @@ type Crawler struct {
 type CrawlOptions struct {
 	AuthType   int
 	User, Pass string
+
+	// URLBufferSize is the amount of URLs that can be waiting to be visited.
+	URLBufferSize int
 
 	// MaxContentLength specifies the maximum size of pages to be crawled. Setting it to 0
 	// will default to 512Kb. Set it to -1 to allow unlimited size
