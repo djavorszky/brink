@@ -1,6 +1,7 @@
 package brink
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
@@ -18,13 +19,14 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 	}
 
 	c := Crawler{
-		RootDomain:      rootDomainURL,
-		allowedDomains:  store.New(),
-		visitedURLs:     store.New(),
-		ignoreGETParams: store.New(),
-		handlers:        make(map[int]func(url string, status int, body string)),
-		client:          &http.Client{},
-		opts:            CrawlOptions{MaxContentLength: DefaultMaxContentLength},
+		RootDomain:       rootDomainURL,
+		allowedDomains:   store.New(),
+		visitedURLs:      store.New(),
+		ignoredGETParams: store.New(),
+		reqHeaders:       store.New(),
+		handlers:         make(map[int]func(url string, status int, body string)),
+		client:           &http.Client{},
+		opts:             CrawlOptions{MaxContentLength: DefaultMaxContentLength},
 	}
 
 	c.AllowDomains(rootDomainURL)
@@ -41,20 +43,30 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	}
 
 	c := Crawler{
-		RootDomain:      rootDomainURL,
-		allowedDomains:  store.New(),
-		visitedURLs:     store.New(),
-		ignoreGETParams: store.New(),
-		handlers:        make(map[int]func(url string, status int, body string)),
-		client:          &http.Client{},
-		opts:            userOptions,
+		RootDomain:       rootDomainURL,
+		allowedDomains:   store.New(),
+		visitedURLs:      store.New(),
+		ignoredGETParams: store.New(),
+		reqHeaders:       store.New(),
+		handlers:         make(map[int]func(url string, status int, body string)),
+		client:           &http.Client{},
+		opts:             userOptions,
 	}
 
+	// Headers
+	if userOptions.Headers != nil {
+		for k, v := range userOptions.Headers {
+			c.reqHeaders.Store(k, v)
+		}
+	}
+
+	// Domains
 	err = setupDomains(&c.allowedDomains, rootDomainURL, userOptions.AllowedDomains)
 	if err != nil {
 		return nil, fmt.Errorf("allowed domains setup: %v", err)
 	}
 
+	// Cookies
 	if userOptions.Cookies != nil {
 		c.client.Jar, err = fillCookieJar(userOptions.Cookies)
 		if err != nil {
@@ -62,10 +74,18 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 		}
 	}
 
+	// Content length
 	c.opts.MaxContentLength = getMaxContentLength(userOptions.MaxContentLength)
 
+	// Ignore GET Parameters
 	for _, v := range userOptions.IgnoreGETParameters {
-		c.ignoreGETParams.StoreKey(v)
+		c.ignoredGETParams.StoreKey(v)
+	}
+
+	// Authentication
+	err = configureAuth(&c, userOptions.AuthType, userOptions.User, userOptions.Pass)
+	if err != nil {
+		return nil, fmt.Errorf("failed setting up auth: %v", err)
 	}
 
 	return &c, nil
@@ -117,4 +137,24 @@ func getMaxContentLength(maxCL int64) int64 {
 	}
 
 	return maxCL
+}
+
+func configureAuth(c *Crawler, authType int, user, pass string) error {
+	switch authType {
+	case AuthNone:
+		return nil
+	case AuthBasic:
+		return configureBasicAuth(c, user, pass)
+	}
+
+	return nil
+}
+
+func configureBasicAuth(c *Crawler, user, pass string) error {
+	userPass := fmt.Sprintf("%s:%s", user, pass)
+	encodedUserPass := base64.StdEncoding.EncodeToString([]byte(userPass))
+
+	c.reqHeaders.Store("Authorization", fmt.Sprintf("Basic %s", encodedUserPass))
+
+	return nil
 }

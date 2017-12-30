@@ -77,12 +77,12 @@ func (c *Crawler) normalizeURL(_url string) (string, error) {
 	}
 	params := u.Query()
 
-	if c.ignoreGETParams.Size() > 0 {
+	if c.ignoredGETParams.Size() > 0 {
 		ignoreParams = true
 	}
 
 	for key, vals := range params {
-		if ignoreParams && c.ignoreGETParams.Contains(key) {
+		if ignoreParams && c.ignoredGETParams.Contains(key) {
 			continue
 		}
 
@@ -96,11 +96,11 @@ func (c *Crawler) normalizeURL(_url string) (string, error) {
 		}
 	}
 
-	sort.Strings(result)
-
 	if len(result) == 0 {
 		return fmt.Sprintf("%s://%s", u.Scheme, u.Host), nil
 	}
+
+	sort.Strings(result)
 
 	return fmt.Sprintf("%s://%s?%s", u.Scheme, u.Host, strings.Join(result, "&")), nil
 }

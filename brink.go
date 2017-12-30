@@ -67,8 +67,8 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 		return 0, nil, fmt.Errorf("failed creating new request: %v", err)
 	}
 
-	if c.opts.Headers != nil {
-		for key, value := range c.opts.Headers {
+	if c.reqHeaders.Size() != 0 {
+		for key, value := range c.reqHeaders.ToMap() {
 			req.Header.Add(key, value)
 		}
 	}

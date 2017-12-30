@@ -33,9 +33,10 @@ type Crawler struct {
 	defaultHandler func(url string, status int, body string)
 	handlers       map[int]func(url string, status int, body string)
 
-	allowedDomains  store.CStore
-	visitedURLs     store.CStore
-	ignoreGETParams store.CStore
+	reqHeaders       store.CStore
+	allowedDomains   store.CStore
+	visitedURLs      store.CStore
+	ignoredGETParams store.CStore
 }
 
 // CrawlOptions contains options for the crawler
