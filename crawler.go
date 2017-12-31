@@ -45,33 +45,38 @@ type Crawler struct {
 
 // CrawlOptions contains options for the crawler
 type CrawlOptions struct {
-	AuthType   int
-	User, Pass string
+	AuthType int    `toml:"auth-type"`
+	User     string `toml:"user"`
+	Pass     string `toml:"pass"`
 
 	// URLBufferSize is the amount of URLs that can be waiting to be visited.
-	URLBufferSize int
+	URLBufferSize int `toml:"url-buffer-size"`
 
 	// WorkerCount specifies the number of goroutines that will work on crawling the domains.
-	WorkerCount int
+	WorkerCount int `toml:"worker-count"`
 
 	// MaxContentLength specifies the maximum size of pages to be crawled. Setting it to 0
 	// will default to 512Kb. Set it to -1 to allow unlimited size
-	MaxContentLength int64
+	MaxContentLength int64 `toml:"max-content-length"`
 
 	// AllowedDomains will be used to check whether a domain is allowed to be crawled or not.
-	AllowedDomains []string
+	AllowedDomains []string `toml:"allowed-domains"`
 
 	// Cookies holds a mapping for URLs -> list of cookies to be added to all requests
-	Cookies map[string][]*http.Cookie
+	Cookies map[string][]*http.Cookie `toml:"cookies"`
 
 	// Headers holds a mapping for key->values to be added to all requests
-	Headers map[string]string
+	Headers map[string]string `toml:"headers"`
 
 	// Ignore certain GET parameters when comparing whether an URL has been visited or not
-	IgnoreGETParameters []string
+	IgnoreGETParameters []string `toml:"ignore-get-parameters"`
+
+	// FuzzyGETParameterChecks will decide whether to try to do exact matches for parameters.
+	// If set to false, GET parameters are only ignored if they are an exact match. If set
+	// to false, they are checked with a substring fashion.
+	FuzzyGETParameterChecks bool `toml:"fuzzy-get-parameter-checks"`
 
 	// todo: add ctx
 	// todo: add proxy support
 	// todo: add beforeFunc and afterFunc
-	// todo: add multiple workers
 }

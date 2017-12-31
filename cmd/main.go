@@ -18,8 +18,10 @@ func main() {
 
 	c, err := brink.NewCrawlerWithOpts(os.Args[1],
 		brink.CrawlOptions{
-			WorkerCount:   2,
-			URLBufferSize: 250,
+			WorkerCount:             2,
+			URLBufferSize:           500,
+			IgnoreGETParameters:     []string{"redirect"},
+			FuzzyGETParameterChecks: true,
 		},
 	)
 	if err != nil {

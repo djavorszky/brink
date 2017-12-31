@@ -1,6 +1,9 @@
 package store
 
-import "sync"
+import (
+	"strings"
+	"sync"
+)
 
 // CStore stands for ConcurrentStore and is simply an abstract of a map with a mutex.
 type CStore struct {
@@ -10,7 +13,9 @@ type CStore struct {
 
 // New returns an initialized CStore
 func New() CStore {
-	return CStore{store: make(map[string]string)}
+	return CStore{
+		store: make(map[string]string),
+	}
 }
 
 // Store stores the value with the provided key
@@ -34,6 +39,30 @@ func (cs *CStore) Contains(key string) bool {
 	_, ok := cs.Load(key)
 
 	return ok
+}
+
+// AnyContains checks whether the passed needle is contained
+// in any of the keys that the store has.
+func (cs *CStore) AnyContains(needle string) bool {
+	for key := range cs.store {
+		if strings.Contains(key, needle) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// AnyContainsReverse checks whether any of the keys stored by
+// the store is contained in the passed haystack
+func (cs *CStore) AnyContainsReverse(haystack string) bool {
+	for key := range cs.store {
+		if strings.Contains(haystack, key) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // StoreKey simply stores the key with empty value

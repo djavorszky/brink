@@ -173,3 +173,59 @@ func TestCStore_ToMap(t *testing.T) {
 		})
 	}
 }
+
+func TestCStore_AnyContains(t *testing.T) {
+	cs := New()
+
+	cs.StoreKey("_com_liferay_portal_redirect")
+	cs.StoreKey("some_body_once_told_me_the_world_is_gonna_roll_me")
+	cs.StoreKey("potato")
+
+	type args struct {
+		pattern string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"contains substr", args{"redirect"}, true},
+		{"contains exactly", args{"potato"}, true},
+		{"doesnt_contain", args{"kiwi"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := cs.AnyContains(tt.args.pattern); got != tt.want {
+				t.Errorf("CStore.AnyContains() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCStore_AnyContainsReverse(t *testing.T) {
+	cs := New()
+
+	cs.StoreKey("redirect")
+	cs.StoreKey("smash")
+	cs.StoreKey("potato")
+
+	type args struct {
+		haystack string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"contains substr", args{"com_liferay_portal_redirect"}, true},
+		{"contains exactly", args{"potato"}, true},
+		{"doesnt_contain", args{"kiwi"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := cs.AnyContainsReverse(tt.args.haystack); got != tt.want {
+				t.Errorf("CStore.AnyContains() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

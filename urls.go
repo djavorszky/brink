@@ -107,8 +107,14 @@ func (c *Crawler) normalizeURL(_url string) (string, error) {
 	}
 
 	for key, vals := range params {
-		if ignoreParams && c.ignoredGETParams.Contains(key) {
-			continue
+		if ignoreParams {
+			if c.ignoredGETParams.Contains(key) {
+				continue
+			}
+
+			if c.opts.FuzzyGETParameterChecks && c.ignoredGETParams.AnyContainsReverse(key) {
+				continue
+			}
 		}
 
 		for _, val := range vals {

@@ -94,6 +94,8 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 		c.opts.WorkerCount = userOptions.WorkerCount
 	}
 
+	c.opts.FuzzyGETParameterChecks = userOptions.FuzzyGETParameterChecks
+
 	return c, nil
 }
 
