@@ -25,6 +25,31 @@ type Link struct {
 	Target string
 }
 
+// AbsoluteLinksIn expects a valid HTML to parse and returns a slice
+// of the links (anchors) contained inside. If "ignoreAnchors"
+// is set to true, then links which point to "#someAnchor" type
+// locations are ignored.
+//
+// If any links within the HTML start with a forward slash (e.g. is a dynamic link),
+// it will get prepended with the passed url.
+func AbsoluteLinksIn(url string, response []byte, ignoreAnchors bool) ([]Link, error) {
+	host, err := schemeAndHost(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing url: %v", err)
+	}
+
+	links := LinksIn(response, ignoreAnchors)
+
+	for ix, l := range links {
+		if strings.HasPrefix(l.Href, "/") {
+			l.Href = host + l.Href
+			links[ix] = l
+		}
+	}
+
+	return links, nil
+}
+
 // LinksIn expects a valid HTML to parse and returns a slice
 // of the links (anchors) contained inside. If "ignoreAnchors"
 // is set to true, then links which point to "#someAnchor" type
@@ -71,7 +96,7 @@ func (c *Crawler) normalizeURL(_url string) (string, error) {
 		ignoreParams bool
 	)
 
-	u, err := url.ParseRequestURI(_url)
+	u, err := url.ParseRequestURI(strings.TrimSpace(_url))
 	if err != nil {
 		return "", fmt.Errorf("failed parsing url: %v", err)
 	}

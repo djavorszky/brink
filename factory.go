@@ -90,6 +90,10 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 		c.urls = make(chan Link, userOptions.URLBufferSize)
 	}
 
+	if userOptions.WorkerCount > 0 {
+		c.opts.WorkerCount = userOptions.WorkerCount
+	}
+
 	return c, nil
 }
 

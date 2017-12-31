@@ -16,7 +16,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	c, err := brink.NewCrawlerWithOpts(os.Args[1], brink.CrawlOptions{})
+	c, err := brink.NewCrawlerWithOpts(os.Args[1],
+		brink.CrawlOptions{
+			WorkerCount:   2,
+			URLBufferSize: 250,
+		},
+	)
 	if err != nil {
 		fmt.Printf("oops: %v\n", err)
 		os.Exit(1)

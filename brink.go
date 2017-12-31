@@ -38,7 +38,7 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 	wg.Add(c.opts.WorkerCount)
 
 	for i := 0; i < c.opts.WorkerCount; i++ {
-		name := fmt.Sprintf("goroutine-%d", i)
+		name := fmt.Sprintf("worker-%d", i)
 		log.Printf("Spawning %s", name)
 
 		go func(name string) {
@@ -47,7 +47,6 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 			var count int
 
 			for link := range c.urls {
-				count++
 				url, err := c.normalizeURL(link.Href)
 				if err != nil {
 					// Debug..
@@ -57,16 +56,18 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 
 				if c.seenURL(url) {
 					// Debug..
-					log.Printf("%s: already seen URL: %s", name, url)
+					//	log.Printf("%s: already seen URL: %s", name, url)
 					continue
 				}
 
 				c.visitedURLs.StoreKey(url)
 
+				log.Printf("Fetching %s", url)
+
 				st, bod, err := c.Fetch(url)
 				if err != nil {
 					// Debug..
-					log.Printf("%s: failed fetch: %v", name, err)
+					//log.Printf("%s: failed fetch: %v", name, err)
 					continue
 				}
 
@@ -81,13 +82,19 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 				}
 
 				// Parse links and send them all to the urls channel
-				links := LinksIn(bod, true)
+				links, err := AbsoluteLinksIn(link.Href, bod, true)
+				if err != nil {
+					log.Printf("err in AbsLinksIn: %v", err)
+					continue
+				}
 				for _, l := range links {
-					log.Printf("%s: url: %v", name, l.Href)
+					//log.Printf("%s: url: %v", name, l.Href)
+
 					c.visitedURLs.StoreKey(l.Href)
 
 					c.urls <- l
 				}
+				count++
 
 				log.Printf("%s: count: %d", name, count)
 			}
@@ -176,9 +183,7 @@ func (c *Crawler) HandleFunc(status int, h func(url string, status int, body str
 }
 
 func (c *Crawler) seenURL(url string) bool {
-	normalizedURL, _ := c.normalizeURL(url)
-
-	return c.visitedURLs.Contains(normalizedURL)
+	return c.visitedURLs.Contains(url)
 }
 
 func (c *Crawler) domainAllowed(domain string) bool {
