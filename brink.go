@@ -5,7 +5,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
+	"time"
 )
 
 // Start starts the crawler at the specified rootDomain. It will scrape the page for
@@ -27,7 +29,23 @@ func (c *Crawler) Start() error {
 	var wg sync.WaitGroup
 	c.spawnWorkers(&wg)
 
-	c.urls <- Link{Href: c.RootDomain}
+	c.urls <- Link{LinkedFrom: c.RootDomain, Href: c.RootDomain}
+
+	// Spawn checker
+	go func() {
+		ticker := time.Tick(5 * time.Second)
+
+		for range ticker {
+			select {
+			case url := <-c.urls:
+				c.urls <- url
+			default:
+				log.Println("No urls to parse, exiting.")
+				close(c.urls)
+				break
+			}
+		}
+	}()
 
 	wg.Wait()
 
@@ -44,8 +62,6 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 		go func(name string) {
 			defer wg.Done()
 
-			var count int
-
 			for link := range c.urls {
 				url, err := c.normalizeURL(link.Href)
 				if err != nil {
@@ -54,15 +70,20 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 					continue
 				}
 
-				if c.seenURL(url) {
-					// Debug..
-					//	log.Printf("%s: already seen URL: %s", name, url)
+				if st, ok := c.visitedURLs.Load(url); ok {
+					st, err := strconv.Atoi(st)
+					if err != nil {
+						log.Printf("failed conversion: %v", err)
+					}
+
+					if f, ok := c.handlers[st]; ok {
+						f(link.LinkedFrom, url, st, "")
+					} else {
+						c.defaultHandler(link.LinkedFrom, url, st, "")
+					}
+
 					continue
 				}
-
-				c.visitedURLs.StoreKey(url)
-
-				log.Printf("Fetching %s", url)
 
 				st, bod, err := c.Fetch(url)
 				if err != nil {
@@ -71,10 +92,12 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 					continue
 				}
 
+				c.visitedURLs.Store(url, strconv.Itoa(st))
+
 				if f, ok := c.handlers[st]; ok {
-					f(c.RootDomain, st, string(bod))
+					f(link.LinkedFrom, url, st, "")
 				} else {
-					c.defaultHandler(c.RootDomain, st, string(bod))
+					c.defaultHandler(link.LinkedFrom, url, st, "")
 				}
 
 				if st != http.StatusOK {
@@ -82,21 +105,21 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 				}
 
 				// Parse links and send them all to the urls channel
-				links, err := AbsoluteLinksIn(link.Href, bod, true)
+				links, err := AbsoluteLinksIn(link.Href, link.Href, bod, true)
 				if err != nil {
 					log.Printf("err in AbsLinksIn: %v", err)
 					continue
 				}
-				for _, l := range links {
-					//log.Printf("%s: url: %v", name, l.Href)
 
-					c.visitedURLs.StoreKey(l.Href)
+				for _, l := range links {
+					if l.Href == "" {
+						continue
+					}
 
 					c.urls <- l
 				}
-				count++
 
-				log.Printf("%s: count: %d", name, count)
+				//log.Printf("%s: count: %d, linkCount: %d", name, count, lc)
 			}
 		}(name)
 	}
@@ -171,14 +194,14 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 // which doesn't have a seperate handler defined by HandleFunc. Subsequent
 // calls to HandleDefaultFunc will overwrite the previously set handlers,
 // if any.
-func (c *Crawler) HandleDefaultFunc(h func(url string, status int, body string)) {
+func (c *Crawler) HandleDefaultFunc(h func(linkedFrom string, url string, status int, body string)) {
 	c.defaultHandler = h
 }
 
 // HandleFunc is used to register a function to be called when a new page is
 // found with the specified status. Subsequent calls to register functions
 // to the same statuses will silently overwrite previously set handlers, if any.
-func (c *Crawler) HandleFunc(status int, h func(url string, status int, body string)) {
+func (c *Crawler) HandleFunc(status int, h func(linkedFrom string, url string, status int, body string)) {
 	c.handlers[status] = h
 }
 

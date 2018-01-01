@@ -24,7 +24,7 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 		visitedURLs:      store.New(),
 		ignoredGETParams: store.New(),
 		reqHeaders:       store.New(),
-		handlers:         make(map[int]func(url string, status int, body string)),
+		handlers:         make(map[int]func(linkedFrom string, url string, status int, body string)),
 		client:           &http.Client{},
 		opts: CrawlOptions{
 			MaxContentLength: DefaultMaxContentLength,
@@ -63,7 +63,7 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 
 	// Cookies
 	if userOptions.Cookies != nil {
-		c.client.Jar, err = fillCookieJar(userOptions.Cookies)
+		c.client.Jar, err = fillCookieJar(rootDomain, userOptions.Cookies)
 		if err != nil {
 			return nil, fmt.Errorf("cookie setup: %v", err)
 		}
@@ -114,13 +114,30 @@ func setupDomains(allowedDomains *store.CStore, rootDomain string, otherDomains 
 	return nil
 }
 
-func fillCookieJar(cookieMap map[string][]*http.Cookie) (http.CookieJar, error) {
+func fillCookieJar(rootDomain string, cookieMap map[string][]*http.Cookie) (http.CookieJar, error) {
 	cj, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
 		return nil, fmt.Errorf("failed creating cookie jar: %v", err)
 	}
 
-	for u, cookies := range cookieMap {
+	urlCookieMap := make(map[string][]*http.Cookie)
+	for _, cookies := range cookieMap {
+		for _, cookie := range cookies {
+			cks, ok := urlCookieMap[cookie.Domain]
+			if !ok {
+				cks = make([]*http.Cookie, 0)
+			}
+
+			cks = append(cks, cookie)
+
+			urlCookieMap[cookie.Domain] = cks
+		}
+	}
+
+	for u, cookies := range urlCookieMap {
+		if u == "" {
+			u = rootDomain
+		}
 		parsedURL, err := url.ParseRequestURI(u)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing url %q for cookie: %v", parsedURL, err)

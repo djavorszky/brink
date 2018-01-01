@@ -1,6 +1,7 @@
 package brink
 
 import (
+	"math"
 	"net/http"
 
 	"github.com/djavorszky/brink/store"
@@ -17,8 +18,8 @@ const (
 // as reported by the server is lar ger than is specified, the page won't
 // be downloaded.
 const (
-	DefaultMaxContentLength   = 512 * 1024          // 512Kb
-	UnlimitedMaxContentlength = 9223372036854775807 // 9.22 exabytes
+	DefaultMaxContentLength   = 512 * 1024    // 512Kb
+	UnlimitedMaxContentlength = math.MaxInt64 // 4,61 exabytes
 )
 
 // Crawler represents a web crawler, starting from a RootDomain
@@ -30,8 +31,8 @@ type Crawler struct {
 	opts       CrawlOptions
 
 	// Handlers...
-	defaultHandler func(url string, status int, body string)
-	handlers       map[int]func(url string, status int, body string)
+	defaultHandler func(linkedFrom string, url string, status int, body string)
+	handlers       map[int]func(linkedFrom string, url string, status int, body string)
 
 	// urls is the channel that goroutines will send URLs to and
 	// receive URLs from when visiting and processing pages.

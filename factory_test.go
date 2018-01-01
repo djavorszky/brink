@@ -118,7 +118,7 @@ func Test_fillCookieJar(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fillCookieJar(tt.args.cookieMap)
+			got, err := fillCookieJar("http://localhost:7010", tt.args.cookieMap)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getCookieJar() error = %v, wantErr %v", err, tt.wantErr)
 				return

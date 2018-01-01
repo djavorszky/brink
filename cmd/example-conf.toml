@@ -38,7 +38,7 @@
     
     #
     # Specify the maximum content length in bytes for urls that will still be fetched. Leave it at
-    # 0 to use the default value (512 kb), or -1 to use an unlimited content length (9.2 exabytes).
+    # 0 to use the default value (512 kb), or -1 to use an unlimited content length (4.6 exabytes).
     # 
     max-content-length = 0
 

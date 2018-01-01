@@ -19,10 +19,12 @@ func schemeAndHost(_url string) (string, error) {
 	return fmt.Sprintf("%s://%s", u.Scheme, u.Host), nil
 }
 
-// Link represents a very basic HTML anchor tag
+// Link represents a very basic HTML anchor tag. LinkedFrom is the page on which it is found,
+// Href is where it is pointing to.
 type Link struct {
-	Href   string
-	Target string
+	LinkedFrom string
+	Href       string
+	Target     string
 }
 
 // AbsoluteLinksIn expects a valid HTML to parse and returns a slice
@@ -32,14 +34,13 @@ type Link struct {
 //
 // If any links within the HTML start with a forward slash (e.g. is a dynamic link),
 // it will get prepended with the passed url.
-func AbsoluteLinksIn(url string, response []byte, ignoreAnchors bool) ([]Link, error) {
-	host, err := schemeAndHost(url)
+func AbsoluteLinksIn(hostURL, linkedFrom string, body []byte, ignoreAnchors bool) ([]Link, error) {
+	host, err := schemeAndHost(hostURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed parsing url: %v", err)
 	}
 
-	links := LinksIn(response, ignoreAnchors)
-
+	links := LinksIn(linkedFrom, body, ignoreAnchors)
 	for ix, l := range links {
 		if strings.HasPrefix(l.Href, "/") {
 			l.Href = host + l.Href
@@ -54,10 +55,10 @@ func AbsoluteLinksIn(url string, response []byte, ignoreAnchors bool) ([]Link, e
 // of the links (anchors) contained inside. If "ignoreAnchors"
 // is set to true, then links which point to "#someAnchor" type
 // locations are ignored.
-func LinksIn(response []byte, ignoreAnchors bool) []Link {
+func LinksIn(linkedFrom string, body []byte, ignoreAnchors bool) []Link {
 	links := make([]Link, 0)
 
-	z := html.NewTokenizer(bytes.NewBuffer(response))
+	z := html.NewTokenizer(bytes.NewBuffer(body))
 	for {
 		if z.Next() == html.ErrorToken {
 			// Returning io.EOF indicates success.
@@ -67,7 +68,7 @@ func LinksIn(response []byte, ignoreAnchors bool) []Link {
 		t := z.Token()
 
 		if t.Type == html.StartTagToken && t.Data == "a" {
-			var l Link
+			l := Link{LinkedFrom: linkedFrom}
 			for _, attr := range t.Attr {
 				switch attr.Key {
 				case "href":
@@ -128,10 +129,10 @@ func (c *Crawler) normalizeURL(_url string) (string, error) {
 	}
 
 	if len(result) == 0 {
-		return fmt.Sprintf("%s://%s", u.Scheme, u.Host), nil
+		return fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path), nil
 	}
 
 	sort.Strings(result)
 
-	return fmt.Sprintf("%s://%s?%s", u.Scheme, u.Host, strings.Join(result, "&")), nil
+	return fmt.Sprintf("%s://%s%s?%s", u.Scheme, u.Host, u.Path, strings.Join(result, "&")), nil
 }

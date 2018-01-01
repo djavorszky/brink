@@ -39,6 +39,7 @@ func Test_schemeAndHost(t *testing.T) {
 
 func Test_LinksIn(t *testing.T) {
 	type args struct {
+		url          string
 		response     []byte
 		ignoreAnchor bool
 	}
@@ -47,35 +48,35 @@ func Test_LinksIn(t *testing.T) {
 		args args
 		want []Link
 	}{
-		{"no links no anchors", args{[]byte("<html><header><title>This is title</title></header><body>Hello world</body></html>"), false}, []Link{}},
-		{"no links with anchors", args{[]byte("<html><header><title>This is title</title></header><body>Hello world</body></html>"), true}, []Link{}},
+		{"no links no anchors", args{"https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body>Hello world</body></html>"), false}, []Link{}},
+		{"no links with anchors", args{"https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body>Hello world</body></html>"), true}, []Link{}},
 		{"one link with anchors",
-			args{[]byte("<html><header><title>This is title</title></header><body><a href=\"#\">Hello world</a></body></html>"), false},
-			[]Link{Link{Href: "#"}},
+			args{"https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"#\">Hello world</a></body></html>"), false},
+			[]Link{Link{LinkedFrom: "https://www.liferay.com", Href: "#"}},
 		},
 		{"ignore anchor",
-			args{[]byte("<html><header><title>This is title</title></header><body><a href=\"#\">Hello world</a></body></html>"), true},
+			args{"https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"#\">Hello world</a></body></html>"), true},
 			[]Link{},
 		},
 		{"one link with target blank",
-			args{[]byte("<html><header><title>This is title</title></header><body><a href=\"google.com\" target=\"_blank\">Hello world</a></body></html>"), true},
-			[]Link{Link{Href: "google.com", Target: "_blank"}},
+			args{"https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"google.com\" target=\"_blank\">Hello world</a></body></html>"), true},
+			[]Link{Link{LinkedFrom: "https://www.liferay.com", Href: "google.com", Target: "_blank"}},
 		},
 		{"two links with target blank",
-			args{[]byte("<html><header><title>This is title</title></header><body><a href=\"google.com\">Hello world</a><a href=\"liferay.com\" target=\"_blank\">Whatsup</a></body></html>"), true},
+			args{"https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"google.com\">Hello world</a><a href=\"liferay.com\" target=\"_blank\">Whatsup</a></body></html>"), true},
 			[]Link{
-				Link{Href: "google.com"},
-				Link{Href: "liferay.com", Target: "_blank"},
+				Link{LinkedFrom: "https://www.liferay.com", Href: "google.com"},
+				Link{LinkedFrom: "https://www.liferay.com", Href: "liferay.com", Target: "_blank"},
 			},
 		},
 		{"one link with javascript",
-			args{[]byte("<html><header><title>This is title</title></header><body><a href=\"javascript:;\">Hello world</a></body></html>"), false},
+			args{"https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"javascript:;\">Hello world</a></body></html>"), false},
 			[]Link{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := LinksIn(tt.args.response, tt.args.ignoreAnchor); !reflect.DeepEqual(got, tt.want) {
+			if got := LinksIn(tt.args.url, tt.args.response, tt.args.ignoreAnchor); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getLinks() = %v, want %v", got, tt.want)
 			}
 		})
@@ -120,7 +121,8 @@ func Test_normalizeURL(t *testing.T) {
 
 func TestAbsoluteLinksIn(t *testing.T) {
 	type args struct {
-		url           string
+		hostURL       string
+		linkURL       string
 		response      []byte
 		ignoreAnchors bool
 	}
@@ -130,43 +132,44 @@ func TestAbsoluteLinksIn(t *testing.T) {
 		want    []Link
 		wantErr bool
 	}{
-		{"no links no anchors", args{"https://google.com", []byte("<html><header><title>This is title</title></header><body>Hello world</body></html>"), false}, []Link{}, false},
-		{"no links with anchors", args{"https://google.com", []byte("<html><header><title>This is title</title></header><body>Hello world</body></html>"), true}, []Link{}, false},
+		{"no links no anchors", args{"https://google.com", "https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body>Hello world</body></html>"), false}, []Link{}, false},
+		{"no links with anchors", args{"https://google.com", "https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body>Hello world</body></html>"), true}, []Link{}, false},
 		{"one link with anchors",
-			args{"https://google.com", []byte("<html><header><title>This is title</title></header><body><a href=\"#\">Hello world</a></body></html>"), false},
-			[]Link{Link{Href: "#"}}, false,
+			args{"https://google.com", "https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"#\">Hello world</a></body></html>"), false},
+			[]Link{Link{LinkedFrom: "https://www.liferay.com", Href: "#"}}, false,
 		},
 		{"ignore anchor",
-			args{"https://google.com", []byte("<html><header><title>This is title</title></header><body><a href=\"#\">Hello world</a></body></html>"), true},
+			args{"https://google.com", "https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"#\">Hello world</a></body></html>"), true},
 			[]Link{}, false,
 		},
 		{"one link with target blank",
-			args{"https://google.com", []byte("<html><header><title>This is title</title></header><body><a href=\"google.com\" target=\"_blank\">Hello world</a></body></html>"), true},
-			[]Link{Link{Href: "google.com", Target: "_blank"}}, false,
+			args{"https://google.com", "https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"google.com\" target=\"_blank\">Hello world</a></body></html>"), true},
+			[]Link{Link{LinkedFrom: "https://www.liferay.com", Href: "google.com", Target: "_blank"}}, false,
 		},
 		{"two links with target blank",
-			args{"https://google.com", []byte("<html><header><title>This is title</title></header><body><a href=\"google.com\">Hello world</a><a href=\"liferay.com\" target=\"_blank\">Whatsup</a></body></html>"), true},
+			args{"https://google.com", "https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"google.com\">Hello world</a><a href=\"liferay.com\" target=\"_blank\">Whatsup</a></body></html>"), true},
 			[]Link{
-				Link{Href: "google.com"},
-				Link{Href: "liferay.com", Target: "_blank"},
+				Link{LinkedFrom: "https://www.liferay.com", Href: "google.com"},
+				Link{LinkedFrom: "https://www.liferay.com", Href: "liferay.com", Target: "_blank"},
 			}, false,
 		},
 		{"one link with javascript",
 			args{
 				"https://google.com",
+				"https://www.liferay.com",
 				[]byte("<html><header><title>This is title</title></header><body><a href=\"javascript:;\">Hello world</a></body></html>"),
 				false,
 			},
 			[]Link{}, false,
 		},
 		{"one dynamic link",
-			args{"https://google.com", []byte("<html><header><title>This is title</title></header><body><a href=\"/hello\" target=\"_blank\">Hello world</a></body></html>"), true},
-			[]Link{Link{Href: "https://google.com/hello", Target: "_blank"}}, false,
+			args{"https://google.com", "https://www.liferay.com", []byte("<html><header><title>This is title</title></header><body><a href=\"/hello\" target=\"_blank\">Hello world</a></body></html>"), true},
+			[]Link{Link{LinkedFrom: "https://www.liferay.com", Href: "https://google.com/hello", Target: "_blank"}}, false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := AbsoluteLinksIn(tt.args.url, tt.args.response, tt.args.ignoreAnchors)
+			got, err := AbsoluteLinksIn(tt.args.hostURL, tt.args.linkURL, tt.args.response, tt.args.ignoreAnchors)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AbsoluteLinksIn() error = %v, wantErr %v", err, tt.wantErr)
 				return

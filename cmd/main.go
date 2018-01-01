@@ -88,10 +88,15 @@ func main() {
 	}()
 
 	c.HandleDefaultFunc(handler)
+	c.HandleFunc(http.StatusNotFound, notFoundHandler)
 
 	c.Start()
 }
 
-func handler(url string, status int, body string) {
-	log.Printf("status: %d, url: %v", status, url)
+func handler(linkedFrom, url string, status int, body string) {
+	log.Printf("%s -> %s: %d ", linkedFrom, url, status)
+}
+
+func notFoundHandler(linkedFrom, url string, status int, body string) {
+	log.Printf("404: %s", url)
 }
