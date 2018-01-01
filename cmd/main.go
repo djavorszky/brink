@@ -93,10 +93,18 @@ func main() {
 	c.Start()
 }
 
-func handler(linkedFrom, url string, status int, body string) {
-	log.Printf("%s -> %s: %d ", linkedFrom, url, status)
+func handler(linkedFrom, url string, status int, body string, cached bool) {
+	if cached {
+		log.Printf("CACHED: %s -> %s: %d ", linkedFrom, url, status)
+	} else {
+		log.Printf("%s -> %s: %d ", linkedFrom, url, status)
+	}
 }
 
-func notFoundHandler(linkedFrom, url string, status int, body string) {
-	log.Printf("404: %s", url)
+func notFoundHandler(linkedFrom, url string, status int, body string, cached bool) {
+	if cached {
+		log.Printf("CACHED: 404: %s", url)
+	} else {
+		log.Printf("404: %s", url)
+	}
 }

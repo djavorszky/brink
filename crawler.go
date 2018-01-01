@@ -31,8 +31,8 @@ type Crawler struct {
 	opts       CrawlOptions
 
 	// Handlers...
-	defaultHandler func(linkedFrom string, url string, status int, body string)
-	handlers       map[int]func(linkedFrom string, url string, status int, body string)
+	defaultHandler func(linkedFrom string, url string, status int, body string, cached bool)
+	handlers       map[int]func(linkedFrom string, url string, status int, body string, cached bool)
 
 	// urls is the channel that goroutines will send URLs to and
 	// receive URLs from when visiting and processing pages.

@@ -77,9 +77,9 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 					}
 
 					if f, ok := c.handlers[st]; ok {
-						f(link.LinkedFrom, url, st, "")
+						f(link.LinkedFrom, url, st, "", true)
 					} else {
-						c.defaultHandler(link.LinkedFrom, url, st, "")
+						c.defaultHandler(link.LinkedFrom, url, st, "", true)
 					}
 
 					continue
@@ -95,9 +95,9 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 				c.visitedURLs.Store(url, strconv.Itoa(st))
 
 				if f, ok := c.handlers[st]; ok {
-					f(link.LinkedFrom, url, st, "")
+					f(link.LinkedFrom, url, st, "", false)
 				} else {
-					c.defaultHandler(link.LinkedFrom, url, st, "")
+					c.defaultHandler(link.LinkedFrom, url, st, "", false)
 				}
 
 				if st != http.StatusOK {
@@ -194,14 +194,14 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 // which doesn't have a seperate handler defined by HandleFunc. Subsequent
 // calls to HandleDefaultFunc will overwrite the previously set handlers,
 // if any.
-func (c *Crawler) HandleDefaultFunc(h func(linkedFrom string, url string, status int, body string)) {
+func (c *Crawler) HandleDefaultFunc(h func(linkedFrom string, url string, status int, body string, cached bool)) {
 	c.defaultHandler = h
 }
 
 // HandleFunc is used to register a function to be called when a new page is
 // found with the specified status. Subsequent calls to register functions
 // to the same statuses will silently overwrite previously set handlers, if any.
-func (c *Crawler) HandleFunc(status int, h func(linkedFrom string, url string, status int, body string)) {
+func (c *Crawler) HandleFunc(status int, h func(linkedFrom string, url string, status int, body string, cached bool)) {
 	c.handlers[status] = h
 }
 

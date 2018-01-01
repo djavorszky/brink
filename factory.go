@@ -24,7 +24,7 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 		visitedURLs:      store.New(),
 		ignoredGETParams: store.New(),
 		reqHeaders:       store.New(),
-		handlers:         make(map[int]func(linkedFrom string, url string, status int, body string)),
+		handlers:         make(map[int]func(linkedFrom string, url string, status int, body string, cached bool)),
 		client:           &http.Client{},
 		opts: CrawlOptions{
 			MaxContentLength: DefaultMaxContentLength,
