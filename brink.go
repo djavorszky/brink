@@ -35,14 +35,17 @@ func (c *Crawler) Start() error {
 	go func() {
 		ticker := time.Tick(5 * time.Second)
 
+	ticker:
 		for range ticker {
 			select {
 			case url := <-c.urls:
-				c.urls <- url
+				if !c.stopping {
+					c.urls <- url
+				}
 			default:
 				log.Println("No urls to parse, exiting.")
 				close(c.urls)
-				break
+				break ticker
 			}
 		}
 	}()
@@ -62,6 +65,7 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 		go func(name string) {
 			defer wg.Done()
 
+		loop:
 			for link := range c.urls {
 				url, err := c.normalizeURL(link.Href)
 				if err != nil {
@@ -116,6 +120,10 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 						continue
 					}
 
+					if c.stopping {
+						break loop
+					}
+
 					c.urls <- l
 				}
 
@@ -126,11 +134,10 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 }
 
 // Stop attempts to stop the crawler.
-func (c *Crawler) Stop() error {
-	log.Println("Received signal to stop.")
+func (c *Crawler) Stop() {
+	log.Println("Received signal to stop... Will finish cached runs.")
+	c.stopping = true
 	close(c.urls)
-
-	return nil
 }
 
 // AllowDomains instructs the crawler which domains it is allowed

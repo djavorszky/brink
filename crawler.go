@@ -34,9 +34,11 @@ type Crawler struct {
 	defaultHandler func(linkedFrom string, url string, status int, body string, cached bool)
 	handlers       map[int]func(linkedFrom string, url string, status int, body string, cached bool)
 
-	// urls is the channel that goroutines will send URLs to and
-	// receive URLs from when visiting and processing pages.
+	// urls is the channel from which the workers will receive the URLs
+	// to process.
 	urls chan Link
+
+	stopping bool
 
 	reqHeaders       store.CStore
 	allowedDomains   store.CStore
