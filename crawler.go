@@ -73,7 +73,7 @@ type CrawlOptions struct {
 
 	// FuzzyGETParameterChecks will decide whether to try to do exact matches for parameters.
 	// If set to false, GET parameters are only ignored if they are an exact match. If set
-	// to false, they are checked with a substring fashion.
+	// to true, they are checked with a substring fashion.
 	FuzzyGETParameterChecks bool `toml:"fuzzy-get-parameter-checks"`
 
 	// todo: add ctx

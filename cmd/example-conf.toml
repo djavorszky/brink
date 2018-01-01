@@ -1,0 +1,101 @@
+
+    #
+    # The property auth-type specifies what type of authentication to use when sending requests.
+    # Setting a value of 0 means not to use any authentication.
+    #
+    # Possible values and their meaning:
+    # 
+    # 0 = No authentication
+    # 1 = Basic authentication
+    #
+    auth-type = 0
+
+    #
+    # Specify the user and the password to be used for authentication. Only added to the requests
+    # if auth-type is not set to 0.
+    #
+    user = ""
+    pass = ""
+
+    #
+    # The propery url-buffer-size controls the size of the work queue. Workers will keep sending
+    # urls to the queue until the number of urls waiting to be processes reaches the below size.
+    # If the size of the queue reaches the specified amounts, the workers will be blocked from
+    # sending further urls to the queue.
+    #
+    # Should be set to a reasonable value, taking into consideration the number of workers
+    # processing the pages to avoid getting into a deadlock situation.
+    #
+    url-buffer-size = 150
+
+    #
+    # Specify the number of workers to fetch and process the pages. Setting it too low will mean
+    # a low throughput but will spare the server from accepting a high load. Conversely, setting
+    # it to a high value will result in higher throughput as long as the server can handle the
+    # number of concurrent requests it is receiving.
+    #
+    worker-count = 2
+    
+    #
+    # Specify the maximum content length in bytes for urls that will still be fetched. Leave it at
+    # 0 to use the default value (512 kb), or -1 to use an unlimited content length (9.2 exabytes).
+    # 
+    max-content-length = 0
+
+    #
+    # Specify the entrypoint - e.g. the first URL to be fetched and crawled for links.
+    #
+    entrypoint = "http:/example.com"
+
+    #
+    # Specify a list of URLs that the crawler is allowed to visit. If the crawler encounters any
+    # URLs that are outside the domain ranges of the entrypoint + allowed-domains list, it will
+    # not crawl those pages. It will fetch them to see the their http status, however those pages
+    # won't be crawled.
+    #
+    allowed-domains = ["http://www.example.com"]
+
+    #
+    # Specify a list of GET parameters to be ignored when comparing and fetching URLs. This is useful
+    # if there are GET parameters in some requests that are always regenerated, such as auth tokens in
+    # forms or redirect paths for example.
+    #
+    ignore-get-parameters = ["redirect"]
+
+    #
+    # When checking whether to ignore a GET parameter or not, there are two ways: Exact and Fuzzy
+    # matching.
+    #
+    # Exact match checks if the GET parameter in the URL matches any of the specified parameters in 
+    # the ignore-get-parameters list. This corresponds to the "false" value.
+    #
+    # Fuzzy match checks if any of the parameters in the ignore-get-parameters list is a substring
+    # of the currently checked GET parameter. This corresponds to the "true" value
+    #
+    fuzzy-get-parameter-checks = false
+
+    #
+    # Specify a list of cookies to be added to each requests.
+    #
+    [cookies]
+
+    #
+    # The below is an example entry for a cookie
+    #
+    [[cookies.example]]
+        Name = "Cookie Name"
+        Value = "Cookie Value"
+        Path = "/"
+        Domain = "example.com"
+        Expires = 2018-12-31T22:59:59Z
+        RawExpires = ""
+        MaxAge = 0
+        Secure = true
+        HttpOnly = false
+        Raw = ""
+
+    #
+    # Specify a list of name-value pairs to be added to the headers for each requests.
+    #
+    [headers]
+    header-name = "header-value"
