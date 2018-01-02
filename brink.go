@@ -44,7 +44,7 @@ func (c *Crawler) Start() error {
 				}
 			default:
 				log.Println("No urls to parse, exiting.")
-				close(c.urls)
+				c.Stop()
 				break ticker
 			}
 		}

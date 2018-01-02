@@ -62,7 +62,7 @@ func main() {
 
 	c, err := brink.NewCrawlerWithOpts(opts.EntryPoint,
 		brink.CrawlOptions{
-			AuthType:                opts.WorkerCount,
+			AuthType:                opts.AuthType,
 			User:                    opts.User,
 			Pass:                    opts.Pass,
 			URLBufferSize:           opts.URLBufferSize,
@@ -88,23 +88,23 @@ func main() {
 	}()
 
 	c.HandleDefaultFunc(handler)
-	c.HandleFunc(http.StatusNotFound, notFoundHandler)
+	//c.HandleFunc(http.StatusNotFound, notFoundHandler)
 
 	c.Start()
 }
 
 func handler(linkedFrom, url string, status int, body string, cached bool) {
 	if cached {
-		log.Printf("CACHED: %s -> %s: %d ", linkedFrom, url, status)
+		log.Printf("%d - %s -> %s cached", status, linkedFrom, url)
 	} else {
-		log.Printf("%s -> %s: %d ", linkedFrom, url, status)
+		log.Printf("%d - %s -> %s", status, linkedFrom, url)
 	}
 }
 
 func notFoundHandler(linkedFrom, url string, status int, body string, cached bool) {
 	if cached {
-		log.Printf("CACHED: 404: %s", url)
+		log.Printf("CACHED: %s -> %s: 404", linkedFrom, url)
 	} else {
-		log.Printf("404: %s", url)
+		log.Printf("%s -> %s: 404", linkedFrom, url)
 	}
 }
