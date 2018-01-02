@@ -33,10 +33,8 @@ func (c *Crawler) Start() error {
 
 	// Spawn checker
 	go func() {
-		ticker := time.Tick(5 * time.Second)
-
 	ticker:
-		for range ticker {
+		for range time.Tick(5 * time.Second) {
 			select {
 			case url := <-c.urls:
 				if !c.stopping {
@@ -75,11 +73,7 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 				}
 
 				if st, ok := c.visitedURLs.Load(url); ok {
-					st, err := strconv.Atoi(st)
-					if err != nil {
-						log.Printf("failed conversion: %v", err)
-					}
-
+					st, _ := strconv.Atoi(st)
 					if f, ok := c.handlers[st]; ok {
 						f(link.LinkedFrom, url, st, "", true)
 					} else {

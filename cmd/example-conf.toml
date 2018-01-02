@@ -45,7 +45,7 @@
     #
     # Specify the entrypoint - e.g. the first URL to be fetched and crawled for links.
     #
-    entrypoint = "http:/example.com"
+    entrypoint = "http://example.com"
 
     #
     # Specify a list of URLs that the crawler is allowed to visit. If the crawler encounters any
@@ -86,7 +86,7 @@
         Name = "Cookie Name"
         Value = "Cookie Value"
         Path = "/"
-        Domain = "example.com"
+        Domain = "http://example.com"
         Expires = 2018-12-31T22:59:59Z
         RawExpires = ""
         MaxAge = 0

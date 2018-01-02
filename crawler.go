@@ -62,6 +62,9 @@ type CrawlOptions struct {
 	// will default to 512Kb. Set it to -1 to allow unlimited size
 	MaxContentLength int64 `toml:"max-content-length"`
 
+	// Entrypoint is the first url that will be fetched.
+	EntryPoint string `toml:"entrypoint"`
+
 	// AllowedDomains will be used to check whether a domain is allowed to be crawled or not.
 	AllowedDomains []string `toml:"allowed-domains"`
 

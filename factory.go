@@ -7,6 +7,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 
+	"github.com/BurntSushi/toml"
 	"github.com/djavorszky/brink/store"
 	"golang.org/x/net/publicsuffix"
 )
@@ -95,6 +96,22 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	}
 
 	c.opts.FuzzyGETParameterChecks = userOptions.FuzzyGETParameterChecks
+
+	return c, nil
+}
+
+// NewCrawlerFromToml reads up a file and parses it as a toml property file.
+func NewCrawlerFromToml(filename string) (*Crawler, error) {
+	var opts CrawlOptions
+
+	if _, err := toml.DecodeFile(filename, &opts); err != nil {
+		return nil, fmt.Errorf("failed decoding file: %v", err)
+	}
+
+	c, err := NewCrawlerWithOpts(opts.EntryPoint, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed creating crawler: %v", err)
+	}
 
 	return c, nil
 }
