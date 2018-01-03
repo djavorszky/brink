@@ -13,33 +13,26 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
-/*
 func TestNewCrawler(t *testing.T) {
-	var tClient *http.Client
-
-	testCrawler := &Crawler{
-		RootDomain:     "https://liferay.com",
-		allowedDomains: store.New(),
-		visitedURLs:    store.New(),
-		handlers:       make(map[int]func(url string, status int, body string)),
-		client:         tClient,
-		opts:           CrawlOptions{MaxContentLength: DefaultMaxContentLength},
-	}
-
-	testCrawler.AllowDomains("https://liferay.com")
+	// defaultOpts := CrawlOptions{
+	// 	MaxContentLength:      defaultMaxContentLength,
+	// 	URLBufferSize:         defaultURLBufferSize,
+	// 	WorkerCount:           defaultWorkerCount,
+	// 	IdleWorkCheckInterval: defaultIdleWorkCheckInterval,
+	// }
 
 	type args struct {
 		rootDomain string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *Crawler
-		wantErr bool
+		name           string
+		args           args
+		wantRootDomain string
+		wantErr        bool
 	}{
-		{"Missing schema", args{"google.com"}, nil, true},
-		{"URL", args{"https://liferay.com/"}, testCrawler, false},
-		{"URL with path", args{"https://liferay.com/web/guest/home"}, testCrawler, false},
+		{"Missing schema", args{"google.com"}, "", true},
+		{"URL", args{"https://liferay.com/"}, "https://liferay.com", false},
+		{"URL with path", args{"https://liferay.com/web/guest/home"}, "https://liferay.com", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -51,14 +44,43 @@ func TestNewCrawler(t *testing.T) {
 			if tt.wantErr {
 				return
 			}
-			got.client = tClient
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewCrawler() = %v, want %v", got, tt.want)
+
+			if got.RootDomain != tt.wantRootDomain {
+				t.Errorf("rootDomain mismatch: %s vs %s", got.RootDomain, tt.args.rootDomain)
+			}
+
+			// check defaults
+			if got.opts.MaxContentLength != defaultMaxContentLength {
+				t.Errorf("MaxContentLength mismatch: %d vs %d", got.opts.MaxContentLength, defaultMaxContentLength)
+			}
+
+			if got.opts.URLBufferSize != defaultURLBufferSize {
+				t.Errorf("URLBufferSize mismatch: %d vs %d", got.opts.URLBufferSize, defaultURLBufferSize)
+			}
+
+			if got.opts.WorkerCount != defaultWorkerCount {
+				t.Errorf("WorkerCount mismatch: %d vs %d", got.opts.WorkerCount, defaultWorkerCount)
+			}
+
+			if got.opts.IdleWorkCheckInterval != defaultIdleWorkCheckInterval {
+				t.Errorf("IdleWorkCheckInterval mismatch: %d vs %d", got.opts.IdleWorkCheckInterval, defaultIdleWorkCheckInterval)
+			}
+
+			// Check initializations. If below succeed, all is good.
+			got.allowedDomains.Store("testKey", "testValue")
+			got.visitedURLs.Store("testKey", "testValue")
+			got.ignoredGETParams.Store("testKey", "testValue")
+			got.reqHeaders.Store("testKey", "testValue")
+			got.handlers[200] = func(linkedFrom, url string, st int, bod string, cached bool) {}
+			got.urls <- Link{}
+
+			if !got.allowedDomains.Contains(tt.wantRootDomain) {
+				t.Errorf("rootDomain was not allowed.")
 			}
 		})
 	}
 }
-*/
+
 func TestNewCrawlerWithOpts(t *testing.T) {
 	type args struct {
 		rootDomain  string
@@ -158,8 +180,8 @@ func Test_getMaxContentLength(t *testing.T) {
 		args args
 		want int64
 	}{
-		{"Default", args{0}, DefaultMaxContentLength},
-		{"Unlimited", args{-1}, UnlimitedMaxContentlength},
+		{"Default", args{0}, defaultMaxContentLength},
+		{"Unlimited", args{-1}, unlimitedMaxContentlength},
 		{"Some value", args{512000}, 512000},
 	}
 	for _, tt := range tests {

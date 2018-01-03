@@ -3,6 +3,7 @@ package brink
 import (
 	"encoding/base64"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -10,6 +11,15 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/djavorszky/brink/store"
 	"golang.org/x/net/publicsuffix"
+)
+
+const (
+	defaultMaxContentLength      = 512 * 1024 // 512Kb
+	defaultURLBufferSize         = 10000
+	defaultWorkerCount           = 10
+	defaultIdleWorkCheckInterval = 5000
+
+	unlimitedMaxContentlength = math.MaxInt64 // 4,61 exabytes
 )
 
 // NewCrawler returns an Crawler initialized with default values.
@@ -28,10 +38,10 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 		handlers:         make(map[int]func(linkedFrom string, url string, status int, body string, cached bool)),
 		client:           &http.Client{},
 		opts: CrawlOptions{
-			MaxContentLength:      DefaultMaxContentLength,
-			URLBufferSize:         100,
-			WorkerCount:           10,
-			IdleWorkCheckInterval: 5000,
+			MaxContentLength:      defaultMaxContentLength,
+			URLBufferSize:         defaultURLBufferSize,
+			WorkerCount:           defaultWorkerCount,
+			IdleWorkCheckInterval: defaultIdleWorkCheckInterval,
 		},
 	}
 
@@ -175,9 +185,9 @@ func fillCookieJar(rootDomain string, cookieMap map[string][]*http.Cookie) (http
 func getMaxContentLength(maxCL int64) int64 {
 	switch maxCL {
 	case 0:
-		return DefaultMaxContentLength
+		return defaultMaxContentLength
 	case -1:
-		return UnlimitedMaxContentlength
+		return unlimitedMaxContentlength
 	}
 
 	return maxCL

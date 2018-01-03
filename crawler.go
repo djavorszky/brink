@@ -1,7 +1,6 @@
 package brink
 
 import (
-	"math"
 	"net/http"
 
 	"github.com/djavorszky/brink/store"
@@ -12,14 +11,6 @@ import (
 const (
 	AuthNone = iota
 	AuthBasic
-)
-
-// ContentLengths are used when fetching a page. If the content length
-// as reported by the server is lar ger than is specified, the page won't
-// be downloaded.
-const (
-	DefaultMaxContentLength   = 512 * 1024    // 512Kb
-	UnlimitedMaxContentlength = math.MaxInt64 // 4,61 exabytes
 )
 
 // Crawler represents a web crawler, starting from a RootDomain
