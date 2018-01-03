@@ -58,6 +58,11 @@ type CrawlOptions struct {
 	// WorkerCount specifies the number of goroutines that will work on crawling the domains.
 	WorkerCount int `toml:"worker-count"`
 
+	// IdleWorkCheckInterval configures how frequently the crawler checks if there is any work
+	// to do. If there is no url to be processed, it will gracefully stop itself. Setting it to
+	// 0 will use the default value of 5000 milliseconds.
+	IdleWorkCheckInterval int `toml:"idle-work-check-interval"`
+
 	// MaxContentLength specifies the maximum size of pages to be crawled. Setting it to 0
 	// will default to 512Kb. Set it to -1 to allow unlimited size
 	MaxContentLength int64 `toml:"max-content-length"`

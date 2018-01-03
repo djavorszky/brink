@@ -33,8 +33,10 @@ func (c *Crawler) Start() error {
 
 	// Spawn checker
 	go func() {
+		interval := time.Duration(c.opts.IdleWorkCheckInterval)
+
 	ticker:
-		for range time.Tick(5 * time.Second) {
+		for range time.Tick(interval * time.Millisecond) {
 			select {
 			case url := <-c.urls:
 				if !c.stopping {

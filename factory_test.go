@@ -182,6 +182,7 @@ entrypoint = "http://example.com"
 allowed-domains = ["http://www.example.com"]
 ignore-get-parameters = ["redirect"]
 fuzzy-get-parameter-checks = true
+idle-work-check-interval = 2000
 [cookies]
 [[cookies.example]]
 	Name = "Cookie Name"
@@ -222,6 +223,7 @@ header-name = "header-value"`)
 		AllowedDomains:          []string{"http://www.example.com"},
 		IgnoreGETParameters:     []string{"redirect"},
 		FuzzyGETParameterChecks: true,
+		IdleWorkCheckInterval:   2000,
 		Cookies: map[string][]*http.Cookie{
 			"example": []*http.Cookie{
 				&http.Cookie{
@@ -319,6 +321,11 @@ header-name = "header-value"`)
 
 			if got.opts.FuzzyGETParameterChecks != tt.want.opts.FuzzyGETParameterChecks {
 				t.Errorf("NewCrawlerFromToml() FuzzyGETParameterChecks mismatch: %t vs %t", got.opts.FuzzyGETParameterChecks, tt.want.opts.FuzzyGETParameterChecks)
+				return
+			}
+
+			if got.opts.IdleWorkCheckInterval != tt.want.opts.IdleWorkCheckInterval {
+				t.Errorf("NewCrawlerFromToml() IdleWorkCheckInterval mismatch: %d vs %d", got.opts.IdleWorkCheckInterval, tt.want.opts.IdleWorkCheckInterval)
 				return
 			}
 		})

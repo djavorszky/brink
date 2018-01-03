@@ -28,9 +28,10 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 		handlers:         make(map[int]func(linkedFrom string, url string, status int, body string, cached bool)),
 		client:           &http.Client{},
 		opts: CrawlOptions{
-			MaxContentLength: DefaultMaxContentLength,
-			URLBufferSize:    100,
-			WorkerCount:      10,
+			MaxContentLength:      DefaultMaxContentLength,
+			URLBufferSize:         100,
+			WorkerCount:           10,
+			IdleWorkCheckInterval: 5000,
 		},
 	}
 
@@ -72,6 +73,11 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 
 	// Content length
 	c.opts.MaxContentLength = getMaxContentLength(userOptions.MaxContentLength)
+
+	// Idle check interval
+	if userOptions.IdleWorkCheckInterval > 0 {
+		c.opts.IdleWorkCheckInterval = userOptions.IdleWorkCheckInterval
+	}
 
 	// Ignore GET Parameters
 	for _, v := range userOptions.IgnoreGETParameters {
