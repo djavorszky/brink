@@ -1,6 +1,7 @@
 package brink
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -14,13 +15,6 @@ import (
 )
 
 func TestNewCrawler(t *testing.T) {
-	// defaultOpts := CrawlOptions{
-	// 	MaxContentLength:      defaultMaxContentLength,
-	// 	URLBufferSize:         defaultURLBufferSize,
-	// 	WorkerCount:           defaultWorkerCount,
-	// 	IdleWorkCheckInterval: defaultIdleWorkCheckInterval,
-	// }
-
 	type args struct {
 		rootDomain string
 	}
@@ -82,6 +76,14 @@ func TestNewCrawler(t *testing.T) {
 }
 
 func TestNewCrawlerWithOpts(t *testing.T) {
+	defaultCrawler, _ := NewCrawler("https://www.liferay.com")
+	// defaultOpts := CrawlOptions{
+	// 	MaxContentLength:      defaultMaxContentLength,
+	// 	URLBufferSize:         defaultURLBufferSize,
+	// 	WorkerCount:           defaultWorkerCount,
+	// 	IdleWorkCheckInterval: defaultIdleWorkCheckInterval,
+	// }
+
 	type args struct {
 		rootDomain  string
 		userOptions CrawlOptions
@@ -92,7 +94,7 @@ func TestNewCrawlerWithOpts(t *testing.T) {
 		want    *Crawler
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		{"emptyOpts", args{defaultCrawler.RootDomain, CrawlOptions{}}, defaultCrawler, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -101,8 +103,8 @@ func TestNewCrawlerWithOpts(t *testing.T) {
 				t.Errorf("NewCrawlerWithOpts() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewCrawlerWithOpts() = %v, want %v", got, tt.want)
+			if err = compareCrawlers(got, tt.want); err != nil {
+				t.Errorf("Crawler mismatch: %v", err)
 			}
 		})
 	}
@@ -154,22 +156,6 @@ func Test_fillCookieJar(t *testing.T) {
 		})
 	}
 }
-
-/*
-	{"No rootdomain", args{"", []string{}}, nil, true},
-	{"No scheme in rootdomain", args{"google.com", []string{}}, nil, true},
-	{"No scheme in otherdomains", args{"https://google.com", []string{"plus.google.com"}}, nil, true},
-	{"One otherdomain", args{"https://google.com", []string{"https://plus.google.com"}}, map[string]bool{
-		"https://google.com":      true,
-		"https://plus.google.com": true,
-	}, false},
-	{"Two otherdomains", args{"https://google.com", []string{"https://plus.google.com", "https://gmail.com"}}, map[string]bool{
-		"https://google.com":      true,
-		"https://plus.google.com": true,
-		"https://gmail.com":       true,
-	}, false},
-
-*/
 
 func Test_getMaxContentLength(t *testing.T) {
 	type args struct {
@@ -281,75 +267,82 @@ header-name = "header-value"`)
 				return
 			}
 
-			if got.RootDomain != tt.want.RootDomain {
-				t.Errorf("NewCrawlerFromToml() RootDomain mismatch: %s vs %s", got.RootDomain, tt.want.RootDomain)
-				return
-			}
-
-			if got.opts.EntryPoint != tt.want.opts.EntryPoint {
-				t.Errorf("NewCrawlerFromToml() EntryPoint mismatch: %s vs %s", got.opts.EntryPoint, tt.want.opts.EntryPoint)
-				return
-			}
-
-			if got.opts.AuthType != tt.want.opts.AuthType {
-				t.Errorf("NewCrawlerFromToml() AuthType mismatch: %d vs %d", got.opts.AuthType, tt.want.opts.AuthType)
-				return
-			}
-
-			if got.opts.User != tt.want.opts.User {
-				t.Errorf("NewCrawlerFromToml() User mismatch: %s vs %s", got.opts.User, tt.want.opts.User)
-				return
-			}
-
-			if got.opts.Pass != tt.want.opts.Pass {
-				t.Errorf("NewCrawlerFromToml() Pass mismatch: %s vs %s", got.opts.Pass, tt.want.opts.Pass)
-				return
-			}
-
-			if got.opts.URLBufferSize != tt.want.opts.URLBufferSize {
-				t.Errorf("NewCrawlerFromToml() URLBufferSize mismatch: %d vs %d", got.opts.URLBufferSize, tt.want.opts.URLBufferSize)
-				return
-			}
-
-			if got.opts.WorkerCount != tt.want.opts.WorkerCount {
-				t.Errorf("NewCrawlerFromToml() WorkerCount mismatch: %d vs %d", got.opts.WorkerCount, tt.want.opts.WorkerCount)
-				return
-			}
-
-			if got.opts.MaxContentLength != tt.want.opts.MaxContentLength {
-				t.Errorf("NewCrawlerFromToml() MaxContentLength mismatch: %d vs %d", got.opts.MaxContentLength, tt.want.opts.MaxContentLength)
-				return
-			}
-
-			if !reflect.DeepEqual(got.opts.AllowedDomains, tt.want.opts.AllowedDomains) {
-				t.Errorf("NewCrawlerFromToml() AllowedDomains mismatch: %s vs %s", got.opts.AllowedDomains, tt.want.opts.AllowedDomains)
-				return
-			}
-
-			if !reflect.DeepEqual(got.opts.Headers, tt.want.opts.Headers) {
-				t.Errorf("NewCrawlerFromToml() Headers mismatch: %s vs %s", got.opts.Headers, tt.want.opts.Headers)
-				return
-			}
-
-			if !reflect.DeepEqual(got.opts.Cookies, tt.want.opts.Cookies) {
-				t.Errorf("NewCrawlerFromToml() Cookies mismatch: %s vs %s", got.opts.Cookies, tt.want.opts.Cookies)
-				return
-			}
-
-			if !reflect.DeepEqual(got.opts.IgnoreGETParameters, tt.want.opts.IgnoreGETParameters) {
-				t.Errorf("NewCrawlerFromToml() IgnoreGETParameters mismatch: %s vs %s", got.opts.IgnoreGETParameters, tt.want.opts.IgnoreGETParameters)
-				return
-			}
-
-			if got.opts.FuzzyGETParameterChecks != tt.want.opts.FuzzyGETParameterChecks {
-				t.Errorf("NewCrawlerFromToml() FuzzyGETParameterChecks mismatch: %t vs %t", got.opts.FuzzyGETParameterChecks, tt.want.opts.FuzzyGETParameterChecks)
-				return
-			}
-
-			if got.opts.IdleWorkCheckInterval != tt.want.opts.IdleWorkCheckInterval {
-				t.Errorf("NewCrawlerFromToml() IdleWorkCheckInterval mismatch: %d vs %d", got.opts.IdleWorkCheckInterval, tt.want.opts.IdleWorkCheckInterval)
-				return
+			if err = compareCrawlers(got, tt.want); err != nil {
+				t.Errorf("Mismatching crawlers: %v", err)
 			}
 		})
 	}
+}
+
+func compareCrawlers(got, want *Crawler) error {
+	if got.RootDomain != want.RootDomain {
+		return fmt.Errorf("NewCrawlerFromToml() RootDomain mismatch: %s vs %s", got.RootDomain, want.RootDomain)
+
+	}
+
+	if got.opts.EntryPoint != want.opts.EntryPoint {
+		return fmt.Errorf("NewCrawlerFromToml() EntryPoint mismatch: %s vs %s", got.opts.EntryPoint, want.opts.EntryPoint)
+
+	}
+
+	if got.opts.AuthType != want.opts.AuthType {
+		return fmt.Errorf("NewCrawlerFromToml() AuthType mismatch: %d vs %d", got.opts.AuthType, want.opts.AuthType)
+
+	}
+
+	if got.opts.User != want.opts.User {
+		return fmt.Errorf("NewCrawlerFromToml() User mismatch: %s vs %s", got.opts.User, want.opts.User)
+
+	}
+
+	if got.opts.Pass != want.opts.Pass {
+		return fmt.Errorf("NewCrawlerFromToml() Pass mismatch: %s vs %s", got.opts.Pass, want.opts.Pass)
+
+	}
+
+	if got.opts.URLBufferSize != want.opts.URLBufferSize {
+		return fmt.Errorf("NewCrawlerFromToml() URLBufferSize mismatch: %d vs %d", got.opts.URLBufferSize, want.opts.URLBufferSize)
+
+	}
+
+	if got.opts.WorkerCount != want.opts.WorkerCount {
+		return fmt.Errorf("NewCrawlerFromToml() WorkerCount mismatch: %d vs %d", got.opts.WorkerCount, want.opts.WorkerCount)
+
+	}
+
+	if got.opts.MaxContentLength != want.opts.MaxContentLength {
+		return fmt.Errorf("NewCrawlerFromToml() MaxContentLength mismatch: %d vs %d", got.opts.MaxContentLength, want.opts.MaxContentLength)
+
+	}
+
+	if !reflect.DeepEqual(got.opts.AllowedDomains, want.opts.AllowedDomains) {
+		return fmt.Errorf("NewCrawlerFromToml() AllowedDomains mismatch: %s vs %s", got.opts.AllowedDomains, want.opts.AllowedDomains)
+
+	}
+
+	if !reflect.DeepEqual(got.opts.Headers, want.opts.Headers) {
+		return fmt.Errorf("NewCrawlerFromToml() Headers mismatch: %s vs %s", got.opts.Headers, want.opts.Headers)
+
+	}
+
+	if !reflect.DeepEqual(got.opts.Cookies, want.opts.Cookies) {
+		return fmt.Errorf("NewCrawlerFromToml() Cookies mismatch: %s vs %s", got.opts.Cookies, want.opts.Cookies)
+
+	}
+
+	if !reflect.DeepEqual(got.opts.IgnoreGETParameters, want.opts.IgnoreGETParameters) {
+		return fmt.Errorf("NewCrawlerFromToml() IgnoreGETParameters mismatch: %s vs %s", got.opts.IgnoreGETParameters, want.opts.IgnoreGETParameters)
+
+	}
+
+	if got.opts.FuzzyGETParameterChecks != want.opts.FuzzyGETParameterChecks {
+		return fmt.Errorf("NewCrawlerFromToml() FuzzyGETParameterChecks mismatch: %t vs %t", got.opts.FuzzyGETParameterChecks, want.opts.FuzzyGETParameterChecks)
+
+	}
+
+	if got.opts.IdleWorkCheckInterval != want.opts.IdleWorkCheckInterval {
+		return fmt.Errorf("NewCrawlerFromToml() IdleWorkCheckInterval mismatch: %d vs %d", got.opts.IdleWorkCheckInterval, want.opts.IdleWorkCheckInterval)
+	}
+
+	return nil
 }
