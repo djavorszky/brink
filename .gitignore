@@ -20,3 +20,4 @@
 cmd/cmd
 cmd/debug
 cmd/brink.toml
+cmd/brink
