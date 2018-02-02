@@ -147,24 +147,22 @@ func setupDomains(allowedDomains *store.CStore, rootDomain string, otherDomains 
 	return nil
 }
 
-func fillCookieJar(rootDomain string, cookieMap map[string][]*http.Cookie) (http.CookieJar, error) {
+func fillCookieJar(rootDomain string, cookies []*http.Cookie) (http.CookieJar, error) {
 	cj, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
 		return nil, fmt.Errorf("failed creating cookie jar: %v", err)
 	}
 
 	urlCookieMap := make(map[string][]*http.Cookie)
-	for _, cookies := range cookieMap {
-		for _, cookie := range cookies {
-			cks, ok := urlCookieMap[cookie.Domain]
-			if !ok {
-				cks = make([]*http.Cookie, 0)
-			}
-
-			cks = append(cks, cookie)
-
-			urlCookieMap[cookie.Domain] = cks
+	for _, cookie := range cookies {
+		cks, ok := urlCookieMap[cookie.Domain]
+		if !ok {
+			cks = make([]*http.Cookie, 0)
 		}
+
+		cks = append(cks, cookie)
+
+		urlCookieMap[cookie.Domain] = cks
 	}
 
 	for u, cookies := range urlCookieMap {
@@ -180,6 +178,17 @@ func fillCookieJar(rootDomain string, cookieMap map[string][]*http.Cookie) (http
 	}
 
 	return cj, nil
+}
+
+func appendCookieMap(_url string, cj http.CookieJar, cookies []*http.Cookie) error {
+	parsedURL, err := url.ParseRequestURI(_url)
+	if err != nil {
+		return fmt.Errorf("failed parsing url %q for cookie: %v", parsedURL, err)
+	}
+
+	cj.SetCookies(parsedURL, cookies)
+
+	return nil
 }
 
 func getMaxContentLength(maxCL int64) int64 {

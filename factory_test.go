@@ -112,7 +112,7 @@ func TestNewCrawlerWithOpts(t *testing.T) {
 
 func Test_fillCookieJar(t *testing.T) {
 	type args struct {
-		cookieMap map[string][]*http.Cookie
+		cookieMap []*http.Cookie
 	}
 
 	refNoCookies, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
@@ -136,12 +136,8 @@ func Test_fillCookieJar(t *testing.T) {
 		want    http.CookieJar
 		wantErr bool
 	}{
-		{"No Cookies", args{map[string][]*http.Cookie{}}, refNoCookies, false},
-		{"Two Cookies", args{map[string][]*http.Cookie{"https://liferay.com": []*http.Cookie{c1, c2}}}, refTwoCookies, false},
-		{"Different Domain Cookies", args{map[string][]*http.Cookie{
-			"https://liferay.com":     []*http.Cookie{c1},
-			"https://dev.liferay.com": []*http.Cookie{c2},
-		}}, refDiffDomainCookies, false},
+		{"No Cookies", args{[]*http.Cookie{}}, refNoCookies, false},
+		{"Two Cookies", args{[]*http.Cookie{c1, c2}}, refTwoCookies, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -191,18 +187,29 @@ allowed-domains = ["http://www.example.com"]
 ignore-get-parameters = ["redirect"]
 fuzzy-get-parameter-checks = true
 idle-work-check-interval = 2000
-[cookies]
-[[cookies.example]]
-	Name = "Cookie Name"
-	Value = "Cookie Value"
-	Path = "/"
-	Domain = "http://example.com"
-	Expires = 2018-12-31T22:59:59Z
-	RawExpires = ""
-	MaxAge = 0
-	Secure = true
-	HttpOnly = false
-	Raw = ""
+[[cookies]]
+Name = "Cookie Name"
+Value = "Cookie Value"
+Path = "/"
+Domain = "http://example.com"
+Expires = 2018-12-31T22:59:59Z
+RawExpires = ""
+MaxAge = 0
+Secure = true
+HttpOnly = false
+Raw = ""
+
+[[cookies]]
+Name = "Second Cookie Name"
+Value = "Second Cookie Value"
+Path = "/"
+Domain = "http://example.com"
+Expires = 2018-12-31T22:59:59Z
+RawExpires = ""
+MaxAge = 0
+Secure = true
+HttpOnly = false
+Raw = ""
 [headers]
 header-name = "header-value"`)
 
@@ -232,15 +239,13 @@ header-name = "header-value"`)
 		IgnoreGETParameters:     []string{"redirect"},
 		FuzzyGETParameterChecks: true,
 		IdleWorkCheckInterval:   2000,
-		Cookies: map[string][]*http.Cookie{
-			"example": []*http.Cookie{
-				&http.Cookie{
-					Domain:  "http://example.com",
-					Name:    "Cookie Name",
-					Value:   "Cookie Value",
-					Path:    "/",
-					Expires: date,
-				},
+		Cookies: []*http.Cookie{
+			&http.Cookie{
+				Domain:  "http://example.com",
+				Name:    "Cookie Name",
+				Value:   "Cookie Value",
+				Path:    "/",
+				Expires: date,
 			},
 		},
 		Headers: map[string]string{"header-name": "header-value"},

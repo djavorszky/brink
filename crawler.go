@@ -29,7 +29,8 @@ type Crawler struct {
 	// to process.
 	urls chan Link
 
-	stopping bool
+	stopping       bool
+	cookiesUpdated bool
 
 	reqHeaders       store.CStore
 	allowedDomains   store.CStore
@@ -64,8 +65,9 @@ type CrawlOptions struct {
 	// AllowedDomains will be used to check whether a domain is allowed to be crawled or not.
 	AllowedDomains []string `toml:"allowed-domains"`
 
-	// Cookies holds a mapping for URLs -> list of cookies to be added to all requests
-	Cookies map[string][]*http.Cookie `toml:"cookies"`
+	// Cookies holds a list of cookies to be added to all requests in addition to the one
+	// sent by the servers
+	Cookies []*http.Cookie `toml:"cookies"`
 
 	// Headers holds a mapping for key->values to be added to all requests
 	Headers map[string]string `toml:"headers"`

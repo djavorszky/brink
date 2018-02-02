@@ -169,6 +169,10 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 	}
 	defer resp.Body.Close()
 
+	if !c.cookiesUpdated {
+
+	}
+
 	domain, err := schemeAndHost(url)
 	if err != nil {
 		return 0, nil, fmt.Errorf("malformed url: %v", err)
