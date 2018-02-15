@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"net/http/cookiejar"
-	"net/url"
 
 	"github.com/BurntSushi/toml"
 	"github.com/djavorszky/brink/store"
-	"golang.org/x/net/publicsuffix"
 )
 
 const (
@@ -74,12 +71,7 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	}
 
 	// Cookies
-	if userOptions.Cookies != nil {
-		c.client.Jar, err = fillCookieJar(rootDomain, userOptions.Cookies)
-		if err != nil {
-			return nil, fmt.Errorf("cookie setup: %v", err)
-		}
-	}
+	c.opts.Cookies = userOptions.Cookies
 
 	// Content length
 	c.opts.MaxContentLength = getMaxContentLength(userOptions.MaxContentLength)
@@ -143,50 +135,6 @@ func setupDomains(allowedDomains *store.CStore, rootDomain string, otherDomains 
 
 		allowedDomains.Store(url, "")
 	}
-
-	return nil
-}
-
-func fillCookieJar(rootDomain string, cookies []*http.Cookie) (http.CookieJar, error) {
-	cj, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-	if err != nil {
-		return nil, fmt.Errorf("failed creating cookie jar: %v", err)
-	}
-
-	urlCookieMap := make(map[string][]*http.Cookie)
-	for _, cookie := range cookies {
-		cks, ok := urlCookieMap[cookie.Domain]
-		if !ok {
-			cks = make([]*http.Cookie, 0)
-		}
-
-		cks = append(cks, cookie)
-
-		urlCookieMap[cookie.Domain] = cks
-	}
-
-	for u, cookies := range urlCookieMap {
-		if u == "" {
-			u = rootDomain
-		}
-		parsedURL, err := url.ParseRequestURI(u)
-		if err != nil {
-			return nil, fmt.Errorf("failed parsing url %q for cookie: %v", parsedURL, err)
-		}
-
-		cj.SetCookies(parsedURL, cookies)
-	}
-
-	return cj, nil
-}
-
-func appendCookieMap(_url string, cj http.CookieJar, cookies []*http.Cookie) error {
-	parsedURL, err := url.ParseRequestURI(_url)
-	if err != nil {
-		return fmt.Errorf("failed parsing url %q for cookie: %v", parsedURL, err)
-	}
-
-	cj.SetCookies(parsedURL, cookies)
 
 	return nil
 }

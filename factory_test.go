@@ -4,14 +4,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/cookiejar"
-	"net/url"
 	"os"
 	"reflect"
 	"testing"
 	"time"
-
-	"golang.org/x/net/publicsuffix"
 )
 
 func TestNewCrawler(t *testing.T) {
@@ -110,49 +106,6 @@ func TestNewCrawlerWithOpts(t *testing.T) {
 	}
 }
 
-func Test_fillCookieJar(t *testing.T) {
-	type args struct {
-		cookieMap []*http.Cookie
-	}
-
-	refNoCookies, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-	refTwoCookies, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-	refDiffDomainCookies, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-
-	c1 := &http.Cookie{Domain: "https://liferay.com", Name: "User", Value: "Test"}
-	c2 := &http.Cookie{Domain: "https://liferay.com", Name: "Options", Value: "No"}
-
-	d1, _ := url.ParseRequestURI("https://liferay.com")
-	d2, _ := url.ParseRequestURI("https://dev.liferay.com")
-
-	refTwoCookies.SetCookies(d1, []*http.Cookie{c1, c2})
-
-	refDiffDomainCookies.SetCookies(d1, []*http.Cookie{c1})
-	refDiffDomainCookies.SetCookies(d2, []*http.Cookie{c2})
-
-	tests := []struct {
-		name    string
-		args    args
-		want    http.CookieJar
-		wantErr bool
-	}{
-		{"No Cookies", args{[]*http.Cookie{}}, refNoCookies, false},
-		{"Two Cookies", args{[]*http.Cookie{c1, c2}}, refTwoCookies, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := fillCookieJar("http://localhost:7010", tt.args.cookieMap)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("getCookieJar() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getCookieJar() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_getMaxContentLength(t *testing.T) {
 	type args struct {
 		maxCL int64
@@ -246,6 +199,15 @@ header-name = "header-value"`)
 				Value:   "Cookie Value",
 				Path:    "/",
 				Expires: date,
+				Secure:  true,
+			},
+			&http.Cookie{
+				Domain:  "http://example.com",
+				Name:    "Second Cookie Name",
+				Value:   "Second Cookie Value",
+				Path:    "/",
+				Expires: date,
+				Secure:  true,
 			},
 		},
 		Headers: map[string]string{"header-name": "header-value"},
@@ -282,71 +244,88 @@ header-name = "header-value"`)
 func compareCrawlers(got, want *Crawler) error {
 	if got.RootDomain != want.RootDomain {
 		return fmt.Errorf("NewCrawlerFromToml() RootDomain mismatch: %s vs %s", got.RootDomain, want.RootDomain)
-
 	}
 
 	if got.opts.EntryPoint != want.opts.EntryPoint {
 		return fmt.Errorf("NewCrawlerFromToml() EntryPoint mismatch: %s vs %s", got.opts.EntryPoint, want.opts.EntryPoint)
-
 	}
 
 	if got.opts.AuthType != want.opts.AuthType {
 		return fmt.Errorf("NewCrawlerFromToml() AuthType mismatch: %d vs %d", got.opts.AuthType, want.opts.AuthType)
-
 	}
 
 	if got.opts.User != want.opts.User {
 		return fmt.Errorf("NewCrawlerFromToml() User mismatch: %s vs %s", got.opts.User, want.opts.User)
-
 	}
 
 	if got.opts.Pass != want.opts.Pass {
 		return fmt.Errorf("NewCrawlerFromToml() Pass mismatch: %s vs %s", got.opts.Pass, want.opts.Pass)
-
 	}
 
 	if got.opts.URLBufferSize != want.opts.URLBufferSize {
 		return fmt.Errorf("NewCrawlerFromToml() URLBufferSize mismatch: %d vs %d", got.opts.URLBufferSize, want.opts.URLBufferSize)
-
 	}
 
 	if got.opts.WorkerCount != want.opts.WorkerCount {
 		return fmt.Errorf("NewCrawlerFromToml() WorkerCount mismatch: %d vs %d", got.opts.WorkerCount, want.opts.WorkerCount)
-
 	}
 
 	if got.opts.MaxContentLength != want.opts.MaxContentLength {
 		return fmt.Errorf("NewCrawlerFromToml() MaxContentLength mismatch: %d vs %d", got.opts.MaxContentLength, want.opts.MaxContentLength)
-
 	}
 
 	if !reflect.DeepEqual(got.opts.AllowedDomains, want.opts.AllowedDomains) {
 		return fmt.Errorf("NewCrawlerFromToml() AllowedDomains mismatch: %s vs %s", got.opts.AllowedDomains, want.opts.AllowedDomains)
-
 	}
 
 	if !reflect.DeepEqual(got.opts.Headers, want.opts.Headers) {
 		return fmt.Errorf("NewCrawlerFromToml() Headers mismatch: %s vs %s", got.opts.Headers, want.opts.Headers)
-
 	}
 
-	if !reflect.DeepEqual(got.opts.Cookies, want.opts.Cookies) {
-		return fmt.Errorf("NewCrawlerFromToml() Cookies mismatch: %s vs %s", got.opts.Cookies, want.opts.Cookies)
-
+	for i, c := range got.opts.Cookies {
+		if err := compareCookies(c, want.opts.Cookies[i]); err != nil {
+			return fmt.Errorf("NewCrawlerFromToml() Cookies mismatch: %v", err)
+		}
 	}
 
 	if !reflect.DeepEqual(got.opts.IgnoreGETParameters, want.opts.IgnoreGETParameters) {
 		return fmt.Errorf("NewCrawlerFromToml() IgnoreGETParameters mismatch: %s vs %s", got.opts.IgnoreGETParameters, want.opts.IgnoreGETParameters)
-
 	}
 
 	if got.opts.FuzzyGETParameterChecks != want.opts.FuzzyGETParameterChecks {
 		return fmt.Errorf("NewCrawlerFromToml() FuzzyGETParameterChecks mismatch: %t vs %t", got.opts.FuzzyGETParameterChecks, want.opts.FuzzyGETParameterChecks)
-
 	}
 
 	if got.opts.IdleWorkCheckInterval != want.opts.IdleWorkCheckInterval {
 		return fmt.Errorf("NewCrawlerFromToml() IdleWorkCheckInterval mismatch: %d vs %d", got.opts.IdleWorkCheckInterval, want.opts.IdleWorkCheckInterval)
+	}
+
+	return nil
+}
+
+func compareCookies(c1, c2 *http.Cookie) error {
+	if c1.Domain != c2.Domain {
+		return fmt.Errorf("Domain mismatch: %v vs %v", c1.Domain, c2.Domain)
+	}
+
+	if c1.Name != c2.Name {
+		return fmt.Errorf("Name mismatch: %v vs %v", c1.Name, c2.Name)
+	}
+
+	if c1.Value != c2.Value {
+		return fmt.Errorf("Value mismatch: %v vs %v", c1.Value, c2.Value)
+	}
+
+	if c1.Expires != c2.Expires {
+		return fmt.Errorf("Expires mismatch: %v vs %v", c1.Expires, c2.Expires)
+	}
+
+	if c1.Secure != c2.Secure {
+		return fmt.Errorf("Secure mismatch: %v vs %v", c1.Secure, c2.Secure)
+	}
+
+	if c1.String() != c2.String() {
+		return fmt.Errorf("String() mismatch: %v vs %v", c1.String(), c2.String())
 	}
 
 	return nil
