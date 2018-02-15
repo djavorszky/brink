@@ -1,6 +1,7 @@
 package brink
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -25,11 +26,13 @@ func Test_schemeAndHost(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := schemeAndHost(tt.args._url)
+			scheme, host, err := schemeAndHost(tt.args._url)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("schemeAndHost() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			got := fmt.Sprintf("%s://%s", scheme, host)
+
 			if !tt.wantErr && got != tt.want {
 				t.Errorf("schemeAndHost() = %v, want %v", got, tt.want)
 			}

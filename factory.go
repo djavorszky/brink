@@ -21,10 +21,12 @@ const (
 
 // NewCrawler returns an Crawler initialized with default values.
 func NewCrawler(rootDomain string) (*Crawler, error) {
-	rootDomainURL, err := schemeAndHost(rootDomain)
+	scheme, host, err := schemeAndHost(rootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed parsing url %q: %v", rootDomain, err)
 	}
+
+	rootDomainURL := fmt.Sprintf("%s://%s", scheme, host)
 
 	c := Crawler{
 		RootDomain:       rootDomainURL,
@@ -128,12 +130,12 @@ func setupDomains(allowedDomains *store.CStore, rootDomain string, otherDomains 
 	otherDomains = append(otherDomains, rootDomain)
 
 	for _, domain := range otherDomains {
-		url, err := schemeAndHost(domain)
+		scheme, host, err := schemeAndHost(domain)
 		if err != nil {
 			return fmt.Errorf("failed parsing allowed domain url %q: %v", domain, err)
 		}
 
-		allowedDomains.Store(url, "")
+		allowedDomains.Store(fmt.Sprintf("%s://%s", scheme, host), "")
 	}
 
 	return nil

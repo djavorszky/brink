@@ -59,7 +59,7 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 	wg.Add(c.opts.WorkerCount)
 
 	for i := 0; i < c.opts.WorkerCount; i++ {
-		name := fmt.Sprintf("worker-%d", i)
+		name := fmt.Sprintf("worker-%d", i+1)
 		log.Printf("Spawning %s", name)
 
 		go func(name string) {
@@ -165,8 +165,10 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 	}
 
 	// Add cookies
-	if len(c.opts.Cookies) != 0 {
-		for _, cookie := range c.opts.Cookies {
+	reqCookies := c.cookies()
+	if len(reqCookies) != 0 {
+		for _, cookie := range reqCookies {
+			log.Printf("Cookie: %v", cookie)
 			req.AddCookie(cookie)
 		}
 	}
@@ -177,15 +179,18 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 	}
 	defer resp.Body.Close()
 
-	if !c.cookiesUpdated {
+	// Add response cookies
+	respCookies := resp.Cookies()
+	if len(respCookies) != 0 {
 
 	}
 
-	domain, err := schemeAndHost(url)
+	scheme, host, err := schemeAndHost(url)
 	if err != nil {
 		return 0, nil, fmt.Errorf("malformed url: %v", err)
 	}
 
+	domain := fmt.Sprintf("%s://%s", scheme, host)
 	// if URL is not allowed, return with only its status code
 	if !c.domainAllowed(domain) {
 		return resp.StatusCode, nil, NotAllowed{domain}
@@ -228,4 +233,12 @@ func (c *Crawler) domainAllowed(domain string) bool {
 	_, ok := c.allowedDomains.Load(domain)
 
 	return ok
+}
+
+func (c *Crawler) cookies() (cks []*http.Cookie) {
+	c.opts.cmu.RLock()
+	defer c.opts.cmu.RUnlock()
+	copy(cks, c.opts.Cookies)
+
+	return cks
 }

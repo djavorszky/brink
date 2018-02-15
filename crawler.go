@@ -2,6 +2,7 @@ package brink
 
 import (
 	"net/http"
+	"sync"
 
 	"github.com/djavorszky/brink/store"
 )
@@ -29,13 +30,12 @@ type Crawler struct {
 	// to process.
 	urls chan Link
 
-	stopping       bool
-	cookiesUpdated bool
-
 	reqHeaders       store.CStore
 	allowedDomains   store.CStore
 	visitedURLs      store.CStore
 	ignoredGETParams store.CStore
+
+	stopping bool
 }
 
 // CrawlOptions contains options for the crawler
@@ -68,6 +68,7 @@ type CrawlOptions struct {
 	// Cookies holds a list of cookies to be added to all requests in addition to the one
 	// sent by the servers
 	Cookies []*http.Cookie `toml:"cookies"`
+	cmu     sync.RWMutex
 
 	// Headers holds a mapping for key->values to be added to all requests
 	Headers map[string]string `toml:"headers"`

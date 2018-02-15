@@ -10,13 +10,22 @@ import (
 	"golang.org/x/net/html"
 )
 
-func schemeAndHost(_url string) (string, error) {
+func schemeAndHost(_url string) (string, string, error) {
+	u, err := url.ParseRequestURI(_url)
+	if err != nil {
+		return "", "", fmt.Errorf("failed parsing url: %v", err)
+	}
+
+	return u.Scheme, u.Host, nil
+}
+
+func scheme(_url string) (string, error) {
 	u, err := url.ParseRequestURI(_url)
 	if err != nil {
 		return "", fmt.Errorf("failed parsing url: %v", err)
 	}
 
-	return fmt.Sprintf("%s://%s", u.Scheme, u.Host), nil
+	return u.Scheme, nil
 }
 
 // Link represents a very basic HTML anchor tag. LinkedFrom is the page on which it is found,
@@ -35,15 +44,20 @@ type Link struct {
 // If any links within the HTML start with a forward slash (e.g. is a dynamic link),
 // it will get prepended with the passed url.
 func AbsoluteLinksIn(hostURL, linkedFrom string, body []byte, ignoreAnchors bool) ([]Link, error) {
-	host, err := schemeAndHost(hostURL)
+	scheme, host, err := schemeAndHost(hostURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed parsing url: %v", err)
 	}
 
 	links := LinksIn(linkedFrom, body, ignoreAnchors)
 	for ix, l := range links {
+		if strings.HasPrefix(l.Href, "//") {
+			l.Href = fmt.Sprintf("%s://%s", scheme, l.Href)
+			links[ix] = l
+		}
+
 		if strings.HasPrefix(l.Href, "/") {
-			l.Href = host + l.Href
+			l.Href = fmt.Sprintf("%s://%s%s", scheme, host, l.Href)
 			links[ix] = l
 		}
 	}
