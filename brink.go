@@ -168,7 +168,6 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 	reqCookies := c.cookies()
 	if len(reqCookies) != 0 {
 		for _, cookie := range reqCookies {
-			log.Printf("Cookie: %v", cookie)
 			req.AddCookie(cookie)
 		}
 	}
@@ -182,7 +181,7 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 	// Add response cookies
 	respCookies := resp.Cookies()
 	if len(respCookies) != 0 {
-
+		c.addCookies(respCookies)
 	}
 
 	scheme, host, err := schemeAndHost(url)
@@ -238,7 +237,27 @@ func (c *Crawler) domainAllowed(domain string) bool {
 func (c *Crawler) cookies() (cks []*http.Cookie) {
 	c.cmu.RLock()
 	defer c.cmu.RUnlock()
-	copy(cks, c.opts.Cookies)
+
+	for _, cookie := range c.opts.Cookies {
+		cks = append(cks, cookie)
+	}
 
 	return cks
+}
+
+func (c *Crawler) addCookies(cookies []*http.Cookie) {
+	c.cmu.Lock()
+	defer c.cmu.Unlock()
+
+	// TODO replace following with a map based key lookup.
+new:
+	for _, newCookie := range cookies {
+		for _, setCookie := range c.opts.Cookies {
+			if setCookie.Name == newCookie.Name {
+				continue new
+			}
+		}
+
+		c.opts.Cookies = append(c.opts.Cookies, newCookie)
+	}
 }
