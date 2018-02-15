@@ -236,8 +236,8 @@ func (c *Crawler) domainAllowed(domain string) bool {
 }
 
 func (c *Crawler) cookies() (cks []*http.Cookie) {
-	c.opts.cmu.RLock()
-	defer c.opts.cmu.RUnlock()
+	c.cmu.RLock()
+	defer c.cmu.RUnlock()
 	copy(cks, c.opts.Cookies)
 
 	return cks

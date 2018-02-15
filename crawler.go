@@ -30,6 +30,8 @@ type Crawler struct {
 	// to process.
 	urls chan Link
 
+	cmu sync.RWMutex
+
 	reqHeaders       store.CStore
 	allowedDomains   store.CStore
 	visitedURLs      store.CStore
@@ -68,7 +70,6 @@ type CrawlOptions struct {
 	// Cookies holds a list of cookies to be added to all requests in addition to the one
 	// sent by the servers
 	Cookies []*http.Cookie `toml:"cookies"`
-	cmu     sync.RWMutex
 
 	// Headers holds a mapping for key->values to be added to all requests
 	Headers map[string]string `toml:"headers"`
