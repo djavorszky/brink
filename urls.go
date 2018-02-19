@@ -97,6 +97,8 @@ func LinksIn(linkedFrom string, body []byte, ignoreAnchors bool) []Link {
 				continue
 			}
 
+			l.Href = strings.Trim(l.Href, " ")
+
 			links = append(links, l)
 		}
 	}
