@@ -17,6 +17,8 @@ const (
 	defaultIdleWorkCheckInterval = 5000
 
 	unlimitedMaxContentlength = math.MaxInt64 // 4,61 exabytes
+
+	authorizationHeaderName = "Authorization"
 )
 
 // NewCrawler returns an Crawler initialized with default values.
@@ -73,10 +75,16 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 		return nil, fmt.Errorf("allowed domains setup: %v", err)
 	}
 
+	// Cookies
 	if userOptions.Cookies != nil {
 		for _, cookie := range userOptions.Cookies {
 			c.opts.Cookies[cookie.Name] = cookie
 		}
+	}
+
+	// Session cookie names
+	if userOptions.SessionCookieNames != nil {
+		c.opts.SessionCookieNames = userOptions.SessionCookieNames
 	}
 
 	// Content length
@@ -171,7 +179,7 @@ func configureBasicAuth(c *Crawler, user, pass string) error {
 	userPass := fmt.Sprintf("%s:%s", user, pass)
 	encodedUserPass := base64.StdEncoding.EncodeToString([]byte(userPass))
 
-	c.reqHeaders.Store("Authorization", fmt.Sprintf("Basic %s", encodedUserPass))
+	c.reqHeaders.Store(authorizationHeaderName, fmt.Sprintf("Basic %s", encodedUserPass))
 
 	return nil
 }

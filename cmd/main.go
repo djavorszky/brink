@@ -42,11 +42,20 @@ var (
 )
 
 func handler(linkedFrom, url string, status int, body string, cached bool) {
+	if cached {
+		return
+	}
+
 	count++
 	statuses[status] = statuses[status] + 1
 
-	for status, statusCount := range statuses {
-		fmt.Printf("\rStatus %d: %d ", status, statusCount)
+	if count%100 == 0 {
+		statusStr := ""
+		for status, statusCount := range statuses {
+			statusStr = fmt.Sprintf("%s status %d: %d", statusStr, status, statusCount)
+		}
+
+		log.Println(statusStr)
 	}
 }
 
@@ -56,4 +65,7 @@ func notFoundHandler(linkedFrom, url string, status int, body string, cached boo
 	} else {
 		log.Printf("%s -> %s: 404", linkedFrom, url)
 	}
+
+	count++
+	statuses[status] = statuses[status] + 1
 }

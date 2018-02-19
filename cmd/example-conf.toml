@@ -82,6 +82,15 @@
     fuzzy-get-parameter-checks = false
 
     #
+    # List the names of cookies that hold session ids as values. It is necessary to specify them
+    # in order to remove the authorization header after the first try. Otherwise, every request
+    # would re-authenticate the user, resulting in one session per request.
+    #
+    # Cookie name check is done in a case insensitive way.
+    #
+    session-cookie-names = ["jsessionid"]
+
+    #
     # Specify a list of cookies to be added to each requests.
     #
     [cookies]

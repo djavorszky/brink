@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -157,18 +158,25 @@ func (c *Crawler) Fetch(url string) (status int, body []byte, err error) {
 		return 0, nil, fmt.Errorf("failed creating new request: %v", err)
 	}
 
-	// Add headers
-	if c.reqHeaders.Size() != 0 {
-		for key, value := range c.reqHeaders.ToMap() {
-			req.Header.Add(key, value)
-		}
-	}
-
 	// Add cookies
 	reqCookies := c.cookies()
 	if len(reqCookies) != 0 {
 		for _, cookie := range reqCookies {
 			req.AddCookie(cookie)
+
+			for _, sessionCookieName := range c.opts.SessionCookieNames {
+				if strings.ToLower(cookie.Name) == strings.ToLower(sessionCookieName) {
+					c.reqHeaders.Delete(authorizationHeaderName)
+					break
+				}
+			}
+		}
+	}
+
+	// Add headers
+	if c.reqHeaders.Size() != 0 {
+		for key, value := range c.reqHeaders.ToMap() {
+			req.Header.Add(key, value)
 		}
 	}
 

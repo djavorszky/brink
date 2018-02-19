@@ -82,6 +82,11 @@ type CrawlOptions struct {
 	// to true, they are checked with a substring fashion.
 	FuzzyGETParameterChecks bool `toml:"fuzzy-get-parameter-checks"`
 
+	// SessionCookieNames holds all the cookie names that can represent a sessionId. It is
+	// necessary in order to check whether authorization has been successful to make sure
+	// not to try and re-authorize on every request.
+	SessionCookieNames []string `toml:"session-cookie-names"`
+
 	// todo: add ctx
 	// todo: add proxy support
 	// todo: add beforeFunc and afterFunc
