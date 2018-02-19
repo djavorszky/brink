@@ -84,21 +84,14 @@
     #
     # Specify a list of cookies to be added to each requests.
     #
-    [[cookies]]
-        Name = "Cookie Name"
+    [cookies]
+    
+    #
+    # The below is an example entry for a cookie
+    #
+    [[cookies.CookieName]]
+        Name = "CookieName"
         Value = "Cookie Value"
-        Path = "/"
-        Domain = "http://example.com"
-        Expires = 2018-12-31T22:59:59Z
-        RawExpires = ""
-        MaxAge = 0
-        Secure = true
-        HttpOnly = false
-        Raw = ""
-
-    [[cookies]]
-        Name = "Second Cookie Name"
-        Value = "Second Cookie Value"
         Path = "/"
         Domain = "http://example.com"
         Expires = 2018-12-31T22:59:59Z
