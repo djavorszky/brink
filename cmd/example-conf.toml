@@ -26,7 +26,7 @@
     # Should be set to a reasonable value, taking into consideration the number of workers
     # processing the pages to avoid getting into a deadlock situation.
     #
-    url-buffer-size = 150
+    url-buffer-size = 150000
 
     #
     # Specify the number of workers to fetch and process the pages. Setting it too low will mean
@@ -34,7 +34,7 @@
     # it to a high value will result in higher throughput as long as the server can handle the
     # number of concurrent requests it is receiving.
     #
-    worker-count = 2
+    worker-count = 10
     
     #
     # Specify how frequently the crawler should check if there is any work to do. If there are no URLs
