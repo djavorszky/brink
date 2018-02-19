@@ -192,18 +192,18 @@ header-name = "header-value"`)
 		IgnoreGETParameters:     []string{"redirect"},
 		FuzzyGETParameterChecks: true,
 		IdleWorkCheckInterval:   2000,
-		Cookies: []*http.Cookie{
-			&http.Cookie{
+		Cookies: map[string]*http.Cookie{
+			"CookieName": &http.Cookie{
 				Domain:  "http://example.com",
-				Name:    "Cookie Name",
+				Name:    "CookieName",
 				Value:   "Cookie Value",
 				Path:    "/",
 				Expires: date,
 				Secure:  true,
 			},
-			&http.Cookie{
+			"SecondCookieName": &http.Cookie{
 				Domain:  "http://example.com",
-				Name:    "Second Cookie Name",
+				Name:    "SecondCookieName",
 				Value:   "Second Cookie Value",
 				Path:    "/",
 				Expires: date,

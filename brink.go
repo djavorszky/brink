@@ -249,15 +249,7 @@ func (c *Crawler) addCookies(cookies []*http.Cookie) {
 	c.cmu.Lock()
 	defer c.cmu.Unlock()
 
-	// TODO replace following with a map based key lookup.
-new:
 	for _, newCookie := range cookies {
-		for _, setCookie := range c.opts.Cookies {
-			if setCookie.Name == newCookie.Name {
-				continue new
-			}
-		}
-
-		c.opts.Cookies = append(c.opts.Cookies, newCookie)
+		c.opts.Cookies[newCookie.Name] = newCookie
 	}
 }

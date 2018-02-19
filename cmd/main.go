@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -30,16 +31,22 @@ func main() {
 	}()
 
 	c.HandleDefaultFunc(handler)
-	//c.HandleFunc(http.StatusNotFound, notFoundHandler)
+	c.HandleFunc(http.StatusNotFound, notFoundHandler)
 
 	c.Start()
 }
 
+var (
+	count    int
+	statuses = make(map[int]int, 0)
+)
+
 func handler(linkedFrom, url string, status int, body string, cached bool) {
-	if cached {
-		log.Printf("%d - %s -> %s cached", status, linkedFrom, url)
-	} else {
-		log.Printf("%d - %s -> %s", status, linkedFrom, url)
+	count++
+	statuses[status] = statuses[status] + 1
+
+	for status, statusCount := range statuses {
+		fmt.Printf("\rStatus %d: %d ", status, statusCount)
 	}
 }
 

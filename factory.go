@@ -41,6 +41,7 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 			URLBufferSize:         defaultURLBufferSize,
 			WorkerCount:           defaultWorkerCount,
 			IdleWorkCheckInterval: defaultIdleWorkCheckInterval,
+			Cookies:               make(map[string]*http.Cookie),
 		},
 	}
 
@@ -72,8 +73,11 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 		return nil, fmt.Errorf("allowed domains setup: %v", err)
 	}
 
-	// Cookies
-	c.opts.Cookies = userOptions.Cookies
+	if userOptions.Cookies != nil {
+		for _, cookie := range userOptions.Cookies {
+			c.opts.Cookies[cookie.Name] = cookie
+		}
+	}
 
 	// Content length
 	c.opts.MaxContentLength = getMaxContentLength(userOptions.MaxContentLength)
