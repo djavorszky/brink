@@ -30,7 +30,7 @@ func (c *Crawler) Start() error {
 	var wg sync.WaitGroup
 	c.spawnWorkers(&wg)
 
-	c.urls <- Link{LinkedFrom: c.RootDomain, Href: c.RootDomain}
+	c.urls <- Link{LinkedFrom: "start", Href: c.RootDomain}
 
 	// Spawn checker
 	go func() {
@@ -96,9 +96,9 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 				c.visitedURLs.Store(url, strconv.Itoa(st))
 
 				if f, ok := c.handlers[st]; ok {
-					f(link.LinkedFrom, url, st, "", false)
+					f(link.LinkedFrom, url, st, string(bod), false)
 				} else {
-					c.defaultHandler(link.LinkedFrom, url, st, "", false)
+					c.defaultHandler(link.LinkedFrom, url, st, string(bod), false)
 				}
 
 				if st != http.StatusOK {
