@@ -68,37 +68,37 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 
 		loop:
 			for link := range c.urls {
-				url, err := c.normalizeURL(link.Href)
+				_url, err := c.normalizeURL(link.Href)
 				if err != nil {
 					// Debug..
 					log.Printf("%s: failed normalize: %v", name, err)
 					continue
 				}
 
-				if st, ok := c.visitedURLs.Load(url); ok {
+				if st, ok := c.visitedURLs.Load(_url); ok {
 					st, _ := strconv.Atoi(st)
 					if f, ok := c.handlers[st]; ok {
-						f(link.LinkedFrom, url, st, "", true)
+						f(link.LinkedFrom, _url, st, "", true)
 					} else {
-						c.defaultHandler(link.LinkedFrom, url, st, "", true)
+						c.defaultHandler(link.LinkedFrom, _url, st, "", true)
 					}
 
 					continue
 				}
 
-				st, bod, err := c.Fetch(url)
+				st, bod, err := c.Fetch(_url)
 				if err != nil {
 					// Debug..
 					//log.Printf("%s: failed fetch: %v", name, err)
 					continue
 				}
 
-				c.visitedURLs.Store(url, strconv.Itoa(st))
+				c.visitedURLs.Store(_url, strconv.Itoa(st))
 
 				if f, ok := c.handlers[st]; ok {
-					f(link.LinkedFrom, url, st, string(bod), false)
+					f(link.LinkedFrom, _url, st, string(bod), false)
 				} else {
-					c.defaultHandler(link.LinkedFrom, url, st, string(bod), false)
+					c.defaultHandler(link.LinkedFrom, _url, st, string(bod), false)
 				}
 
 				if st != http.StatusOK {
