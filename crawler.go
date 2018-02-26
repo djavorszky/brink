@@ -36,6 +36,7 @@ type Crawler struct {
 	allowedDomains   store.CStore
 	visitedURLs      store.CStore
 	ignoredGETParams store.CStore
+	forbiddenPaths   store.CStore
 
 	stopping bool
 }
@@ -81,6 +82,10 @@ type CrawlOptions struct {
 	// If set to false, GET parameters are only ignored if they are an exact match. If set
 	// to true, they are checked with a substring fashion.
 	FuzzyGETParameterChecks bool `toml:"fuzzy-get-parameter-checks"`
+
+	// Ignore certain URL Paths. URLs containing Paths that contain sections that are specified
+	// in this list will not be visited.
+	ForbiddenPaths []string `toml:"ignore-path-visits"`
 
 	// SessionCookieNames holds all the cookie names that can represent a sessionId. It is
 	// necessary in order to check whether authorization has been successful to make sure

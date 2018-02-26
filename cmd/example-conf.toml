@@ -82,6 +82,12 @@
     fuzzy-get-parameter-checks = false
 
     #
+    # Specify a list of URL Paths to not be visited. This is useful if there are certain
+    # paths that you don't wish to be crawled. Comparison is done via a "Contains" method.
+    #
+    forbidden-paths = []
+
+    #
     # List the names of cookies that hold session ids as values. It is necessary to specify them
     # in order to remove the authorization header after the first try. Otherwise, every request
     # would re-authenticate the user, resulting in one session per request.

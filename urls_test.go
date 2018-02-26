@@ -183,3 +183,28 @@ func TestAbsoluteLinksIn(t *testing.T) {
 		})
 	}
 }
+
+func Test_pathForbidden(t *testing.T) {
+	c, _ := NewCrawler("https://www.liferay.com")
+	c.forbiddenPaths.StoreKey("group/control_panel")
+
+	type args struct {
+		_url string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"submatch", args{"https://www.liferay.com/group/control_panel/something"}, true},
+		{"exact match", args{"https://www.liferay.com/group/control_panel"}, true},
+		{"no match", args{"https://www.liferay.com/"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := pathForbidden(c, tt.args._url); got != tt.want {
+				t.Errorf("pathForbidden() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

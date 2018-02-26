@@ -3,6 +3,7 @@ package brink
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/url"
 	"sort"
 	"strings"
@@ -151,4 +152,24 @@ func (c *Crawler) normalizeURL(_url string) (string, error) {
 	sort.Strings(result)
 
 	return fmt.Sprintf("%s://%s%s?%s", u.Scheme, u.Host, u.Path, strings.Join(result, "&")), nil
+}
+
+func getPath(_url string) (string, error) {
+	u, err := url.ParseRequestURI(strings.TrimSpace(_url))
+	if err != nil {
+		return "", fmt.Errorf("getPath: %v", err)
+	}
+
+	return u.Path, nil
+}
+
+func pathForbidden(c *Crawler, _url string) bool {
+	p, err := getPath(_url)
+	if err != nil {
+		// Debug..
+		log.Printf("%s: failed getPath: %v", _url, err)
+		return false
+	}
+
+	return c.forbiddenPaths.AnyContainsReverse(p)
 }

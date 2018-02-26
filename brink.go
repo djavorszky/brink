@@ -101,7 +101,7 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 					c.defaultHandler(link.LinkedFrom, _url, st, string(bod), false)
 				}
 
-				if st != http.StatusOK {
+				if st != http.StatusOK || pathForbidden(c, _url) {
 					continue
 				}
 

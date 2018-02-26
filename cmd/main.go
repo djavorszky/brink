@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/djavorszky/brink"
@@ -30,41 +32,18 @@ func main() {
 	}()
 
 	c.HandleDefaultFunc(handler)
-	//c.HandleFunc(http.StatusNotFound, notFoundHandler)
+	c.HandleFunc(http.StatusNotFound, notFoundHandler)
 
 	c.Start()
 }
 
 func handler(linkedFrom, url string, status int, body string, cached bool) {
 	if cached {
-		log.Printf("%s -> %s: %d, cached", linkedFrom, url, status)
-	} else {
-		log.Printf("%s -> %s: %d", linkedFrom, url, status)
-	}
-
-	log.Println(body)
-}
-
-/*
-var (
-	count    int
-	statuses = make(map[int]int, 0)
-)
-func handler(linkedFrom, url string, status int, body string, cached bool) {
-	if cached {
 		return
 	}
 
-	count++
-	statuses[status] = statuses[status] + 1
-
-	if count%100 == 0 {
-		statusStr := ""
-		for status, statusCount := range statuses {
-			statusStr = fmt.Sprintf("%s status %d: %d", statusStr, status, statusCount)
-		}
-
-		log.Println(statusStr)
+	if strings.Contains(body, "Use the buttons below to create it or to search for the words in the title.") {
+		log.Printf("%s -> %s: linked wiki article does not exist", linkedFrom, url)
 	}
 }
 
@@ -74,8 +53,4 @@ func notFoundHandler(linkedFrom, url string, status int, body string, cached boo
 	} else {
 		log.Printf("%s -> %s: 404", linkedFrom, url)
 	}
-
-	count++
-	statuses[status] = statuses[status] + 1
 }
-*/

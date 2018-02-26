@@ -36,6 +36,7 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 		visitedURLs:      store.New(),
 		ignoredGETParams: store.New(),
 		reqHeaders:       store.New(),
+		forbiddenPaths:   store.New(),
 		handlers:         make(map[int]func(linkedFrom string, url string, status int, body string, cached bool)),
 		client:           &http.Client{},
 		opts: CrawlOptions{
@@ -98,6 +99,11 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 	// Ignore GET Parameters
 	for _, v := range userOptions.IgnoreGETParameters {
 		c.ignoredGETParams.StoreKey(v)
+	}
+
+	// Forbidden paths
+	for _, v := range userOptions.ForbiddenPaths {
+		c.forbiddenPaths.StoreKey(v)
 	}
 
 	// Authentication
