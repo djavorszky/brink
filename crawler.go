@@ -26,6 +26,9 @@ type Crawler struct {
 	defaultHandler func(linkedFrom string, url string, status int, body string, cached bool)
 	handlers       map[int]func(linkedFrom string, url string, status int, body string, cached bool)
 
+	// workers state
+	workersRunning []*bool
+
 	// urls is the channel from which the workers will receive the URLs
 	// to process.
 	urls chan Link

@@ -38,16 +38,15 @@ func (c *Crawler) Start() error {
 
 	ticker:
 		for range time.Tick(interval * time.Millisecond) {
-			select {
-			case url := <-c.urls:
-				if !c.stopping {
-					c.urls <- url
+			for _, running := range c.workersRunning {
+				if *running == true {
+					continue ticker
 				}
-			default:
-				log.Println("No urls to parse, exiting.")
-				c.Stop()
-				break ticker
 			}
+
+			log.Println("No urls to parse, exiting.")
+			c.Stop()
+			break ticker
 		}
 	}()
 
@@ -63,15 +62,21 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 		name := fmt.Sprintf("worker-%d", i+1)
 		log.Printf("Spawning %s", name)
 
-		go func(name string) {
+		running := false
+
+		c.workersRunning[i] = &running
+
+		go func(name string, running *bool) {
 			defer wg.Done()
 
 		loop:
 			for link := range c.urls {
+				*running = true
 				_url, err := c.normalizeURL(link.Href)
 				if err != nil {
 					// Debug..
 					log.Printf("%s: failed normalize: %v", name, err)
+					*running = false
 					continue
 				}
 
@@ -83,6 +88,7 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 						c.defaultHandler(link.LinkedFrom, _url, st, "", true)
 					}
 
+					*running = false
 					continue
 				}
 
@@ -90,6 +96,7 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 				if err != nil {
 					// Debug..
 					//log.Printf("%s: failed fetch: %v", name, err)
+					*running = false
 					continue
 				}
 
@@ -102,6 +109,7 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 				}
 
 				if st != http.StatusOK || pathForbidden(c, _url) {
+					*running = false
 					continue
 				}
 
@@ -109,11 +117,13 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 				links, err := AbsoluteLinksIn(link.Href, link.Href, bod, true)
 				if err != nil {
 					log.Printf("err in AbsLinksIn: %v", err)
+					*running = false
 					continue
 				}
 
 				for _, l := range links {
 					if l.Href == "" {
+						*running = false
 						continue
 					}
 
@@ -123,10 +133,11 @@ func (c *Crawler) spawnWorkers(wg *sync.WaitGroup) {
 
 					c.urls <- l
 				}
-
+				*running = false
 				//log.Printf("%s: count: %d, linkCount: %d", name, count, lc)
 			}
-		}(name)
+			*running = false
+		}(name, &running)
 	}
 }
 

@@ -53,6 +53,7 @@ var oks int
 
 func handler(linkedFrom, url string, status int, body string, cached bool) {
 	oks++
+	log.Printf("%d: %s", status, url)
 
 	if oks%100 == 0 {
 		log.Printf("Links seen: %d", oks)

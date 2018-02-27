@@ -38,6 +38,7 @@ func NewCrawler(rootDomain string) (*Crawler, error) {
 		reqHeaders:       store.New(),
 		forbiddenPaths:   store.New(),
 		handlers:         make(map[int]func(linkedFrom string, url string, status int, body string, cached bool)),
+		workersRunning:   make([]*bool, defaultWorkerCount),
 		client:           &http.Client{},
 		opts: CrawlOptions{
 			MaxContentLength:      defaultMaxContentLength,
@@ -121,6 +122,7 @@ func NewCrawlerWithOpts(rootDomain string, userOptions CrawlOptions) (*Crawler, 
 
 	if userOptions.WorkerCount > 0 {
 		c.opts.WorkerCount = userOptions.WorkerCount
+		c.workersRunning = make([]*bool, userOptions.WorkerCount)
 	}
 
 	c.opts.FuzzyGETParameterChecks = userOptions.FuzzyGETParameterChecks
