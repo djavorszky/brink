@@ -187,6 +187,7 @@ func TestAbsoluteLinksIn(t *testing.T) {
 func Test_pathForbidden(t *testing.T) {
 	c, _ := NewCrawler("https://www.liferay.com")
 	c.forbiddenPaths.StoreKey("group/control_panel")
+	c.forbiddenPaths.StoreKey("~/control_panel")
 
 	type args struct {
 		_url string
@@ -198,6 +199,7 @@ func Test_pathForbidden(t *testing.T) {
 	}{
 		{"submatch", args{"https://www.liferay.com/group/control_panel/something"}, true},
 		{"exact match", args{"https://www.liferay.com/group/control_panel"}, true},
+		{"second match", args{"http://localhost:8080/group/guest/~/control_panel/manage?p_p_id=com_liferay_document_library_web_portlet_DLAdminPortlet&p_p_lifecycle=0&p_p_state=maximized"}, true},
 		{"no match", args{"https://www.liferay.com/"}, false},
 	}
 	for _, tt := range tests {

@@ -37,7 +37,15 @@ func main() {
 	c.Start()
 }
 
+var oks int
+
 func handler(linkedFrom, url string, status int, body string, cached bool) {
+	oks++
+
+	if oks%100 == 0 {
+		log.Printf("Links seen: %d", oks)
+	}
+
 	if cached {
 		return
 	}
@@ -49,8 +57,8 @@ func handler(linkedFrom, url string, status int, body string, cached bool) {
 
 func notFoundHandler(linkedFrom, url string, status int, body string, cached bool) {
 	if cached {
-		log.Printf("CACHED: %s -> %s: 404", linkedFrom, url)
+		log.Printf("404: CACHED: %s -> %s", linkedFrom, url)
 	} else {
-		log.Printf("%s -> %s: 404", linkedFrom, url)
+		log.Printf("404: %s -> %s", linkedFrom, url)
 	}
 }
