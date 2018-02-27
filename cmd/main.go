@@ -15,8 +15,20 @@ import (
 
 func main() {
 	config := flag.String("conf", "brink.toml", "Specify the configuration filename to be used")
+	out := flag.String("out", "std", "Specify where to log")
 
 	flag.Parse()
+
+	if *out != "std" {
+		f, err := os.Create(*out)
+		if err != nil {
+			fmt.Printf("Failed creating logfile: %v", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+
+		log.SetOutput(f)
+	}
 
 	c, err := brink.NewCrawlerFromToml(*config)
 	if err != nil {
